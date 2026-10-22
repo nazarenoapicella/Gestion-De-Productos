@@ -1,0 +1,28 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno reales (los archivos de ejemplo sí se versionan)
+.env
+.env.*
+!.env.example
+
+# Bases de datos locales y archivos auxiliares de SQLite
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# Resultados generados
+/build/
+/dist/
+/coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Archivos del sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
