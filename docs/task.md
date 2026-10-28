@@ -250,7 +250,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     5. Limpiar los filtros vuelve a mostrar los tres registros.
   - **Verificación:** `node --test frontend/test/t17.test.js` (12/12), `node --test frontend/test/t13.test.js frontend/test/t14.test.js frontend/test/t15.test.js frontend/test/t16.test.js` (30/30), `npm --prefix backend test` (108/108), `node --check frontend/js/api.js`, `node --check frontend/js/app.js`, `node --check frontend/test/t17.test.js` y `git diff --check`.
 
-- [ ] **T-18 — Incorporar el ajuste de stock en la interfaz**
+- [x] **T-18 — Incorporar el ajuste de stock en la interfaz**
   - **Agente:** Frontend.
   - **Qué hace:** permitir elegir aumentar o disminuir, ingresar una cantidad positiva y ejecutar el endpoint específico. Actualizar el stock visible solo después de una respuesta exitosa.
   - **Archivos previstos:** `frontend/js/app.js`, formulario/markup de ajuste y estilos relacionados.
@@ -261,6 +261,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     2. Intentar disminuir `8` cuando el stock es `7` muestra el error y mantiene `7` en pantalla.
     3. Cantidad `0` o `1.5` se rechaza y no produce un cambio de stock.
     4. Si el servidor falla, la interfaz informa el error y no simula el cambio.
+    5. La operación queda cubierto por pruebas frontend y backend ejecutadas y aprobadas: `frontend/test/t18.test.js` y la suite de backend completa.
 
 - [ ] **T-19 — Mostrar y actualizar el resumen del inventario**
   - **Agente:** Frontend.
@@ -334,3 +335,4 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 
 - [cambio] 2026-10-28 — Se crea el backlog inicial, ordenado por dependencias, con criterios de finalización verificables derivados de las reglas, historias de usuario y casos límite de `spec.md`.
 - [cambio] 2026-10-28 — Se alinean el criterio de precio de T-03 y el ejemplo de T-08 con D-015, que define `price` como texto decimal exacto.
+- [cambio] 2026-10-28 — Se cierra T-18 con ajuste de stock en la interfaz y pruebas ejecutadas en frontend y backend, manteniendo la separación de responsabilidades entre `api.js` y `app.js`.
