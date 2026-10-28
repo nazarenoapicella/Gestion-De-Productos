@@ -58,7 +58,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
   - **Terminada cuando se compruebe:**
     1. Crear con nombre `  Mouse  ` y categoría ` Periféricos ` guarda `Mouse` y `Periféricos`.
     2. Crear con nombre compuesto solo por espacios o categoría vacía se rechaza y no crea ningún registro.
-    3. Se acepta el precio `0` y el precio `1250.50`; se rechazan `-1`, `abc` y `1250.505`.
+    3. Se aceptan los precios textuales `"0"` y `"1250.50"`; se rechazan `"-1"`, `"abc"` y `"1250.505"`.
     4. Se aceptan nombres de 100 caracteres, descripciones de 500 caracteres y categorías de 50 caracteres; se rechazan, respectivamente, 101, 501 y 51 caracteres.
     5. Se acepta stock inicial `0`; se rechazan `-1`, `1.5` y un valor no numérico.
     6. Un producto con stock `5` recibe una edición que incluye `stock: 99`; los campos editables cambian, pero el stock continúa en `5`.
@@ -129,9 +129,9 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
   - **RN / HU:** RN-01, RN-02, RN-03, RN-04, RN-17, RN-18; HU-02.
   - **Depende de:** T-03 y T-07.
   - **Terminada cuando se compruebe:**
-    1. Enviar `{ "name": "  Mouse  ", "category": " Periféricos ", "price": 1250.5, "stock": 5, "description": "" }` responde `201`; el recurso devuelto tiene `name = "Mouse"`, `category = "Periféricos"`, `price = 1250.5` y `stock = 5`, además de `id`, `createdAt` y `updatedAt` generados.
+    1. Enviar `{ "name": "  Mouse  ", "category": " Periféricos ", "price": "1250.50", "stock": 5, "description": "" }` responde `201`; el recurso devuelto tiene `name = "Mouse"`, `category = "Periféricos"`, `price = "1250.50"` y `stock = 5`, además de `id`, `createdAt` y `updatedAt` generados.
     2. Enviar nombre vacío o categoría vacía responde `400` y la cantidad de productos no aumenta.
-    3. Enviar precio `-1`, `"abc"` o `1250.505` responde `400` y no crea registros.
+    3. Enviar precio `"-1"`, `"abc"` o `"1250.505"` responde `400` y no crea registros.
     4. Enviar stock `-1` o `1.5` responde `400` y no crea registros.
     5. Enviar un producto válido con nombre ya existente crea un segundo registro independiente, no reemplaza el primero.
 
@@ -328,3 +328,4 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 ## Historial de cambios
 
 - [cambio] 2026-10-28 — Se crea el backlog inicial, ordenado por dependencias, con criterios de finalización verificables derivados de las reglas, historias de usuario y casos límite de `spec.md`.
+- [cambio] 2026-10-28 — Se alinean el criterio de precio de T-03 y el ejemplo de T-08 con D-015, que define `price` como texto decimal exacto.

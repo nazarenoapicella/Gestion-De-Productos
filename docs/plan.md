@@ -126,8 +126,9 @@ Se usarán restricciones `CHECK` en SQLite para reforzar, como mínimo, los lím
 
 ### 3.2 Precio y stock
 
-- La interfaz y el contrato de la API trabajan con el precio expresado en pesos argentinos (ARS), con hasta dos decimales.
-- Antes de persistir, el backend convierte el precio validado a centavos enteros; al responder, lo presenta nuevamente como precio en ARS.
+- La interfaz y el contrato de la API representan `price` como texto decimal en ARS, con hasta dos cifras decimales. No se aceptan separadores de miles ni notación exponencial.
+- Antes de persistir, el backend valida y convierte el texto a centavos enteros; al responder, vuelve a exponer `price` como texto decimal exacto con dos cifras decimales.
+- Se rechazan importes cuyo `price_cents` exceda `Number.MAX_SAFE_INTEGER`, límite técnico requerido para operar con seguridad con enteros en JavaScript; no es un máximo comercial.
 - El stock se guarda como entero. En ningún flujo se acepta una cantidad decimal o negativa.
 - El stock solo puede cambiar al crear un producto o mediante la operación específica de ajuste; el endpoint de edición normal no puede modificarlo.
 
@@ -158,7 +159,8 @@ La comunicación será una API REST con JSON bajo `/api`. Express servirá tambi
 ### 4.1 Convenciones del contrato
 
 - `operation` será `increase` o `decrease`; `quantity` será un entero positivo.
-- El DTO de producto tendrá `id`, `name`, `description`, `category`, `price`, `stock`, `createdAt` y `updatedAt`. Se propone agregar `lowStock` como dato calculado por el backend para que el frontend no replique el umbral de negocio.
+- El DTO de producto tendrá `id`, `name`, `description`, `category`, `price` como texto decimal exacto, `stock`, `createdAt` y `updatedAt`. Se propone agregar `lowStock` como dato calculado por el backend para que el frontend no replique el umbral de negocio.
+- Las solicitudes envían `price` como texto decimal no negativo, sin agrupación de miles ni exponente, y con hasta dos cifras decimales. El backend lo convierte exactamente a centavos; las respuestas usan texto decimal con dos cifras.
 - Las solicitudes de edición aceptarán únicamente campos editables. Aunque el cliente envíe por error `stock`, ese campo nunca debe modificar el stock.
 - Los códigos previstos son `400` para datos o acciones inválidas, `404` para un producto inexistente, `500` para un fallo inesperado y `201`/`200`/`204` para las operaciones exitosas indicadas en la tabla.
 - Como formato común de error se propone `{ "error": { "code": "VALIDATION_ERROR", "message": "...", "fields": {} } }`. `fields` puede omitirse cuando no corresponda. El formato final debe quedar estable antes de conectar la interfaz.
@@ -199,7 +201,7 @@ Aunque el alcance es pequeño, estas áreas necesitan una implementación cuidad
 
 ### 6.1 Evitar errores de precisión en los precios
 
-No se debe usar un valor de punto flotante como almacenamiento monetario definitivo. El backend validará el precio en ARS, lo convertirá a centavos enteros y persistirá `price_cents`. La conversión y la validación deben rechazar precios con más de dos decimales en lugar de redondearlos silenciosamente.
+No se debe usar un valor de punto flotante como almacenamiento o transporte monetario definitivo. El contrato de la API recibe `price` como texto decimal y devuelve el mismo campo como texto con dos cifras. El backend validará y convertirá el valor a centavos enteros para persistir `price_cents`, rechazando precios negativos, mal formados, con más de dos decimales o cuyo valor en centavos exceda `Number.MAX_SAFE_INTEGER`. No se redondean importes silenciosamente.
 
 ### 6.2 Evitar que el stock quede negativo
 
@@ -233,6 +235,7 @@ La especificación define las reglas de negocio necesarias para el MVP. No se id
 
 | Tema | Lo que la especificación aún no fija | Propuesta del plan | ¿Bloquea el MVP? |
 |---|---|---|---|
+| Representación y límite técnico del precio | La conversión de texto JSON numérico a `Number` puede perder centavos antes de validar. | D-015 define `price` como texto decimal en solicitudes y respuestas, con máximo técnico `price_cents = Number.MAX_SAFE_INTEGER`. | No; decisión adoptada y documentada en `decisiones.md`. |
 | Formato de errores | `spec.md` indica que el objeto de error se documentará al implementar la API. | Usar el formato común descrito en la sección 4.1, con `code`, `message` y `fields` opcional. | No; confirmar y documentar antes de conectar el frontend. |
 | `lowStock` en la respuesta | La especificación exige identificar productos con stock bajo, pero no fija si la API devuelve una propiedad calculada. | Incluir `lowStock` calculado por el backend para no duplicar el umbral en la interfaz. | No; documentarlo en el contrato de la API. |
 | Límite numérico de stock | Se exige entero no negativo, pero no se define un máximo funcional. | Rechazar cantidades que no puedan representarse de forma segura en JavaScript y SQLite; no añadir un máximo comercial arbitrario. | No para uso normal; documentar el límite técnico y probar el rechazo de valores fuera de rango. |
@@ -264,3 +267,4 @@ No se debe empezar por generar toda la aplicación en un único prompt. Cada eta
 ## Historial de cambios
 
 - [cambio] 2026-10-28 — Se crea el plan técnico previo a la implementación: capas, persistencia, modelo de datos, API, ubicación de reglas, riesgos y dudas técnicas.
+- [cambio] 2026-10-28 — Se actualiza el transporte de `price` a texto decimal exacto y se documenta el límite técnico de centavos seguros según D-015.

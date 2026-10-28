@@ -109,6 +109,17 @@ Se guarda el stock actual, pero no un historial de cada entrada o salida. El sis
 
 **Motivo:** reducir tablas, pantallas y reglas en la primera versión. Esta limitación se puede reevaluar en una versión posterior.
 
+## D-015 — Representación exacta del precio en la API
+
+**Estado:** adoptada.
+
+El campo `price` se envía y se devuelve en la API como texto decimal, por ejemplo `"1250.50"`, para conservar exactamente los centavos y evitar pérdidas al convertir JSON a números de punto flotante. Se aceptan valores no negativos con hasta dos cifras decimales, sin separadores de miles ni notación exponencial. El backend convierte el texto a `price_cents` entero y rechaza valores cuyo total en centavos supere `Number.MAX_SAFE_INTEGER`.
+
+El límite de `Number.MAX_SAFE_INTEGER` es técnico y no representa un máximo comercial configurable.
+
+**Motivo:** una cantidad monetaria recibida como número JSON puede perder precisión antes de que el backend la valide. El texto decimal conserva la representación enviada.
+
 ## Historial de cambios
 
 - [cambio] 2026-10-22 — Se documentan las decisiones iniciales necesarias para especificar el MVP sin ambigüedades relevantes.
+- [cambio] 2026-10-28 — D-015 fija el precio decimal como texto en solicitudes y respuestas JSON para preservar centavos con precisión.

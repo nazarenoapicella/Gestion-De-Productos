@@ -64,12 +64,14 @@ Cada producto deberá tener estos campos:
 | `name` | Sí | Texto recortado de espacios externos; debe quedar entre 1 y 100 caracteres. |
 | `description` | No | Texto opcional de hasta 500 caracteres. Si está vacío, se guarda como vacío o nulo de manera consistente. |
 | `category` | Sí | Texto recortado de espacios externos; debe quedar entre 1 y 50 caracteres. |
-| `price` | Sí | Precio en ARS, finito, no negativo y con un máximo de dos decimales. |
+| `price` | Sí | Precio en ARS; en la API se transporta como texto decimal no negativo, con hasta dos cifras decimales. |
 | `stock` | Sí | Número entero mayor o igual que cero. |
 | `createdAt` | Sí | Fecha y hora de creación generadas por el sistema. |
 | `updatedAt` | Sí | Fecha y hora de la última modificación relevante, generadas por el sistema. |
 
 El backend debe guardar el precio en centavos enteros. La interfaz puede mostrarlo con el formato local de pesos argentinos, pero el valor almacenado no debe depender de operaciones de punto flotante sin normalización.
+
+En las solicitudes y respuestas JSON de la API, `price` se representa como texto decimal, por ejemplo `"1250.50"`, para conservar exactamente los centavos. Se aceptan entradas decimales no negativas con hasta dos cifras decimales y sin separadores de miles ni notación exponencial. El backend las convierte a `price_cents`. Por el límite de representación segura de enteros en JavaScript, `price_cents` no puede superar `Number.MAX_SAFE_INTEGER`; este es un límite técnico, no comercial.
 
 El nombre de un producto no necesita ser único en el MVP. Dos registros con el mismo nombre son válidos si tienen identificadores distintos.
 
@@ -91,7 +93,7 @@ Un producto debe tener una categoría no vacía después de quitar espacios exte
 
 ### RN-03 — Validación del precio
 
-El precio debe ser un número finito, mayor o igual que cero y con no más de dos decimales. No se aceptan texto no numérico, `NaN`, infinito ni valores negativos. Un precio de cero está permitido.
+El precio debe recibirse como texto decimal no negativo, sin separadores de miles ni notación exponencial, con no más de dos cifras decimales. No se aceptan texto no numérico ni valores negativos. Un precio de cero está permitido. Después de convertirlo a centavos, el valor no puede superar `Number.MAX_SAFE_INTEGER`, para evitar pérdida de precisión técnica en el backend.
 
 ### RN-04 — Validación del stock
 
@@ -309,3 +311,4 @@ El MVP se considera terminado cuando:
 ## Historial de cambios
 
 - [cambio] 2026-10-22 — Se redacta la primera especificación del MVP a partir de la idea y de las decisiones iniciales.
+- [cambio] 2026-10-28 — RN-03 y el contrato de producto precisan el transporte de `price` como texto decimal exacto, conforme a D-015.
