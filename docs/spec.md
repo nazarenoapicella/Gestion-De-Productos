@@ -274,7 +274,7 @@ La implementación utilizará rutas JSON bajo `/api`. Los nombres exactos pueden
 | `PATCH /api/products/:id/stock` | Aumentar o disminuir el stock mediante operación y cantidad. |
 | `GET /api/summary` | Obtener los tres indicadores del inventario. |
 
-Las solicitudes y respuestas intercambian JSON, salvo que una respuesta no tenga cuerpo. Los errores deben utilizar códigos HTTP apropiados: por ejemplo, `400` para datos inválidos, `404` para un producto inexistente y `500` para un error inesperado del servidor. El formato detallado del objeto de error debe documentarse al implementar la API y mantenerse consistente.
+Las solicitudes y respuestas intercambian JSON, salvo que una respuesta no tenga cuerpo. Los errores deben utilizar códigos HTTP apropiados: `400` para datos inválidos, `404` para un producto inexistente y `500` para un error inesperado del servidor. Los errores JSON usan `{ "error": { "code": "...", "message": "...", "fields": {} } }`; `fields` se omite cuando no corresponda. Los códigos son `VALIDATION_ERROR`, `NOT_FOUND` e `INTERNAL_SERVER_ERROR`, respectivamente. Los errores internos no deben exponer detalles técnicos en la respuesta. El DTO de producto usa `id`, `name`, `description`, `category`, `price`, `stock`, `createdAt` y `updatedAt`; `price` es texto decimal exacto conforme a D-015 y no se devuelve `price_cents`. No se incluye `lowStock` sin una decisión que lo adopte. Ver D-016.
 
 ## 10. Requisitos no funcionales
 

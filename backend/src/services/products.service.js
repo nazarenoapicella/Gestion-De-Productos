@@ -104,6 +104,10 @@ function updateProduct(repository, id, input) {
   return repository.update(id, product);
 }
 
+function getProduct(repository, id) {
+  return repository.findById(id);
+}
+
 function normalizeListFilters(filters) {
   if (!filters || typeof filters !== "object" || Array.isArray(filters)) {
     throw new ValidationError("Los filtros de productos no son válidos.");
@@ -135,6 +139,7 @@ function listProducts(repository, filters = {}) {
 module.exports = {
   createProduct,
   updateProduct,
+  getProduct,
   listProducts,
   ValidationError,
 };

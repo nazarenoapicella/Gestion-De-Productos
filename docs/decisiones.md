@@ -119,7 +119,18 @@ El límite de `Number.MAX_SAFE_INTEGER` es técnico y no representa un máximo c
 
 **Motivo:** una cantidad monetaria recibida como número JSON puede perder precisión antes de que el backend la valide. El texto decimal conserva la representación enviada.
 
+## D-016 — Contrato de lectura y errores de la API
+
+**Estado:** adoptada.
+
+Las respuestas de productos de la API usarán los campos `id`, `name`, `description`, `category`, `price`, `stock`, `createdAt` y `updatedAt`. `price` será texto decimal exacto con dos cifras, conforme a D-015; no se expondrá `price_cents` en el DTO. No se incluirá `lowStock` hasta que exista una decisión que lo requiera.
+
+Los errores JSON usarán `{ "error": { "code": "...", "message": "...", "fields": {} } }`; `fields` se omite cuando no corresponda. Se utilizarán `VALIDATION_ERROR` para datos inválidos, `NOT_FOUND` para recursos inexistentes e `INTERNAL_SERVER_ERROR` para errores inesperados. Los errores internos devolverán un mensaje genérico y sus detalles técnicos no se expondrán en la respuesta.
+
+**Motivo:** fijar un contrato coherente antes de conectar el frontend y evitar exponer detalles internos o representaciones de persistencia.
+
 ## Historial de cambios
 
 - [cambio] 2026-10-22 — Se documentan las decisiones iniciales necesarias para especificar el MVP sin ambigüedades relevantes.
 - [cambio] 2026-10-28 — D-015 fija el precio decimal como texto en solicitudes y respuestas JSON para preservar centavos con precisión.
+- [cambio] 2026-10-28 — D-016 adopta el DTO de producto sin `lowStock` y el formato/códigos comunes de error de la API.

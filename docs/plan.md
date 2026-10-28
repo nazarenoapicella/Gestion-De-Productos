@@ -159,11 +159,11 @@ La comunicación será una API REST con JSON bajo `/api`. Express servirá tambi
 ### 4.1 Convenciones del contrato
 
 - `operation` será `increase` o `decrease`; `quantity` será un entero positivo.
-- El DTO de producto tendrá `id`, `name`, `description`, `category`, `price` como texto decimal exacto, `stock`, `createdAt` y `updatedAt`. Se propone agregar `lowStock` como dato calculado por el backend para que el frontend no replique el umbral de negocio.
+- El DTO de producto tendrá `id`, `name`, `description`, `category`, `price` como texto decimal exacto, `stock`, `createdAt` y `updatedAt`, según D-016. No incluirá `lowStock` hasta que se adopte mediante una decisión.
 - Las solicitudes envían `price` como texto decimal no negativo, sin agrupación de miles ni exponente, y con hasta dos cifras decimales. El backend lo convierte exactamente a centavos; las respuestas usan texto decimal con dos cifras.
 - Las solicitudes de edición aceptarán únicamente campos editables. Aunque el cliente envíe por error `stock`, ese campo nunca debe modificar el stock.
-- Los códigos previstos son `400` para datos o acciones inválidas, `404` para un producto inexistente, `500` para un fallo inesperado y `201`/`200`/`204` para las operaciones exitosas indicadas en la tabla.
-- Como formato común de error se propone `{ "error": { "code": "VALIDATION_ERROR", "message": "...", "fields": {} } }`. `fields` puede omitirse cuando no corresponda. El formato final debe quedar estable antes de conectar la interfaz.
+- Los códigos de error adoptados en D-016 son `400`/`VALIDATION_ERROR` para datos inválidos, `404`/`NOT_FOUND` para un producto inexistente y `500`/`INTERNAL_SERVER_ERROR` para un fallo inesperado. Los errores internos devuelven un mensaje genérico sin detalles técnicos.
+- El formato común de error adoptado en D-016 es `{ "error": { "code": "...", "message": "...", "fields": {} } }`; `fields` puede omitirse cuando no corresponda.
 - Se utilizarán consultas SQL parametrizadas y no se concatenará texto del usuario en el SQL.
 
 El controller no debe duplicar reglas de negocio y el frontend no debe tratar una petición como exitosa hasta recibir una respuesta exitosa del servidor.
@@ -236,12 +236,12 @@ La especificación define las reglas de negocio necesarias para el MVP. No se id
 | Tema | Lo que la especificación aún no fija | Propuesta del plan | ¿Bloquea el MVP? |
 |---|---|---|---|
 | Representación y límite técnico del precio | La conversión de texto JSON numérico a `Number` puede perder centavos antes de validar. | D-015 define `price` como texto decimal en solicitudes y respuestas, con máximo técnico `price_cents = Number.MAX_SAFE_INTEGER`. | No; decisión adoptada y documentada en `decisiones.md`. |
-| Formato de errores | `spec.md` indica que el objeto de error se documentará al implementar la API. | Usar el formato común descrito en la sección 4.1, con `code`, `message` y `fields` opcional. | No; confirmar y documentar antes de conectar el frontend. |
-| `lowStock` en la respuesta | La especificación exige identificar productos con stock bajo, pero no fija si la API devuelve una propiedad calculada. | Incluir `lowStock` calculado por el backend para no duplicar el umbral en la interfaz. | No; documentarlo en el contrato de la API. |
+| Formato de errores | El formato que no estaba fijado inicialmente quedó definido en D-016. | Aplicar el formato común descrito en la sección 4.1, con `code`, `message` y `fields` opcional. | Resuelto: D-016 adoptada. |
+| `lowStock` en la respuesta | La especificación no requiere una propiedad calculada en el DTO de producto. | No incluir `lowStock` hasta que una decisión expresa lo requiera. | Resuelto: D-016 excluye la propiedad por ahora. |
 | Límite numérico de stock | Se exige entero no negativo, pero no se define un máximo funcional. | Rechazar cantidades que no puedan representarse de forma segura en JavaScript y SQLite; no añadir un máximo comercial arbitrario. | No para uso normal; documentar el límite técnico y probar el rechazo de valores fuera de rango. |
 | Empate al ordenar nombres idénticos | Se establece orden alfabético por nombre, sin orden secundario. | Usar `id ASC` como segundo criterio para obtener resultados estables cuando los nombres sean iguales. | No; no cambia ninguna regla de negocio. |
 
-Estas propuestas son detalles técnicos del contrato, no nuevas funciones de negocio. Si durante la revisión se decide otra alternativa, debe actualizarse este plan y, si afecta el comportamiento observable, también `spec.md` o `decisiones.md` antes de implementar.
+Estas propuestas son detalles técnicos del contrato, no nuevas funciones de negocio. Las decisiones adoptadas se registran en `decisiones.md`; cualquier cambio que afecte el comportamiento observable también debe actualizar `spec.md` antes de implementarse.
 
 ## 8. Secuencia de implementación
 
@@ -268,3 +268,4 @@ No se debe empezar por generar toda la aplicación en un único prompt. Cada eta
 
 - [cambio] 2026-10-28 — Se crea el plan técnico previo a la implementación: capas, persistencia, modelo de datos, API, ubicación de reglas, riesgos y dudas técnicas.
 - [cambio] 2026-10-28 — Se actualiza el transporte de `price` a texto decimal exacto y se documenta el límite técnico de centavos seguros según D-015.
+- [cambio] 2026-10-28 — Se alinea el DTO y el formato de errores de API con la decisión adoptada D-016.
