@@ -129,8 +129,17 @@ Los errores JSON usarán `{ "error": { "code": "...", "message": "...", "fields"
 
 **Motivo:** fijar un contrato coherente antes de conectar el frontend y evitar exponer detalles internos o representaciones de persistencia.
 
+## D-017 — Implementación incremental de la interfaz
+
+**Estado:** adoptada.
+
+La pantalla principal y el listado se implementan antes que las operaciones de interfaz. No se muestran opciones de alta ni acciones por producto hasta que su flujo correspondiente esté implementado y pueda operarse. T-14 depende de T-13 e integrará el alta con la pantalla existente; las acciones de edición, eliminación y ajuste de stock se incorporarán con sus respectivas tareas.
+
+**Motivo:** evitar controles sin comportamiento y mantener una secuencia comprobable sin adelantar funcionalidades de tareas posteriores.
+
 ## Historial de cambios
 
 - [cambio] 2026-10-22 — Se documentan las decisiones iniciales necesarias para especificar el MVP sin ambigüedades relevantes.
 - [cambio] 2026-10-28 — D-015 fija el precio decimal como texto en solicitudes y respuestas JSON para preservar centavos con precisión.
 - [cambio] 2026-10-28 — D-016 adopta el DTO de producto sin `lowStock` y el formato/códigos comunes de error de la API.
+- [cambio] 2026-10-28 — D-017 establece la implementación incremental de la interfaz y evita presentar acciones todavía no operativas.

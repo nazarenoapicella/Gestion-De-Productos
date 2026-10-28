@@ -164,8 +164,8 @@ Todo dato recibido debe validarse en el servidor, aunque ya haya sido validado e
 Criterios de aceptación:
 
 - Al abrir el inventario, se muestran los productos existentes ordenados por nombre.
-- Si no hay productos, aparece un estado vacío claro y una opción para registrar el primero.
-- Cada fila muestra, como mínimo, nombre, categoría, precio, stock y las acciones disponibles.
+- Si no hay productos, aparece un estado vacío claro. La opción para registrar el primero se muestra cuando el formulario de alta esté implementado.
+- Cada fila muestra, como mínimo, nombre, categoría, precio y stock. Solo se muestran acciones que estén implementadas y se puedan operar; no se usan controles decorativos para funciones pendientes.
 - Un error del servidor se informa sin mostrar una pantalla rota ni datos ficticios como si fueran reales.
 
 ### HU-02 — Registrar producto
