@@ -1,0 +1,14 @@
+{
+  "name": "stock-simple-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend de Stock Simple",
+  "main": "src/db/index.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "db:init": "node src/db",
+    "test": "node --test"
+  }
+}
