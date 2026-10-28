@@ -80,6 +80,13 @@ h1 {
   background: #fff;
 }
 
+.button--table {
+  min-height: 2.25rem;
+  margin: 0;
+  padding: 0.4rem 0.75rem;
+  white-space: nowrap;
+}
+
 .button:disabled {
   cursor: wait;
   opacity: 0.7;

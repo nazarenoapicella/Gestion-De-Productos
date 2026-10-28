@@ -1,7 +1,9 @@
 const genericErrorMessage = "No se pudieron cargar los productos. Inténtalo nuevamente.";
 const createErrorMessage = "No se pudo registrar el producto. Inténtalo nuevamente.";
+const updateErrorMessage = "No se pudo actualizar el producto. Inténtalo nuevamente.";
+const notFoundErrorMessage = "El producto ya no existe o no fue encontrado.";
 
-async function requestJson(url, options, fallbackMessage) {
+async function requestJson(url, options, fallbackMessage, notFoundMessage = fallbackMessage) {
   let response;
   try {
     response = await fetch(url, options);
@@ -18,6 +20,9 @@ async function requestJson(url, options, fallbackMessage) {
 
   if (!response.ok) {
     const apiError = body && body.error;
+    if (response.status === 404) {
+      throw new Error(notFoundMessage);
+    }
     if (apiError && apiError.code === "VALIDATION_ERROR" &&
         typeof apiError.message === "string" && apiError.message.trim()) {
       throw new Error(apiError.message);
@@ -57,6 +62,28 @@ export async function createProduct(product) {
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new Error(createErrorMessage);
+  }
+
+  return body;
+}
+
+export async function updateProduct(id, product) {
+  const body = await requestJson(
+    `/api/products/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(product),
+    },
+    updateErrorMessage,
+    notFoundErrorMessage,
+  );
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new Error(updateErrorMessage);
   }
 
   return body;

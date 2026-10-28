@@ -353,9 +353,10 @@ test('el HTML define la página española, el área principal y una tabla semán
       `Falta la columna semántica ${label}`
     );
   }
+  const actionHeaders = headers.filter(({ text }) => /\bacciones\b/i.test(text));
   assert.ok(
-    !headers.some(({ text }) => /\bacciones\b/i.test(text)),
-    'T-13 no debe mostrar una columna de acciones pendientes'
+    actionHeaders.length === 0 || actionHeaders.some(({ attributes }) => /\bscope=["']col["']/i.test(attributes)),
+    'Si existe la columna de acciones de T-15, debe tener un encabezado semántico'
   );
 });
 
@@ -431,13 +432,24 @@ test('la interfaz ejecutada renderiza productos del API en celdas, en orden y co
 
   assert.ok(dom.getProductsCalls() > 0, 'la aplicación debe solicitar los productos a getProducts');
   assert.deepEqual(
-    tableRows(dom).map(rowCells),
+    tableRows(dom).map((row) => rowCells(row).slice(0, 4)),
     [
       ['Mouse', 'Periféricos', '1250.50', '5'],
       [maliciousName, 'Periféricos', '700.25', '3'],
       ['Teclado', 'Periféricos', '900.00', '2']
     ]
   );
+  for (const row of tableRows(dom)) {
+    const actionCells = row.children.filter((child) => child.tagName === 'TD').slice(4);
+    for (const cell of actionCells) {
+      const controls = cell.children.filter((child) => ['BUTTON', 'A'].includes(child.tagName));
+      assert.ok(controls.length > 0, 'Una celda de acciones debe contener controles operables');
+      assert.ok(
+        controls.every((control) => /\beditar\b/i.test(control.textContent)),
+        'La acción permitida en T-15 es Editar; no se permiten acciones de eliminación o stock'
+      );
+    }
+  }
   assert.equal(dom.find('img'), null, 'el nombre recibido no debe crear elementos HTML');
 });
 
@@ -479,18 +491,18 @@ test('los errores no se convierten en una lista vacía exitosa ni en datos ficti
   assert.doesNotMatch(app, /catch\s*\([^)]*\)\s*\{[^}]*products\s*=\s*\[\]/s);
 });
 
-test('la UI permite GET y POST de alta, pero no adelanta edición, eliminación ni ajuste de stock', () => {
+test('la UI permite GET, POST y edición, pero no adelanta eliminación ni ajuste de stock', () => {
   const html = readDeliverable('index.html');
   const api = readDeliverable(path.join('js', 'api.js'));
   const app = readDeliverable(path.join('js', 'app.js'));
 
   for (const source of [html, api, app]) {
-    assert.doesNotMatch(source, /\b(?:PUT|PATCH|DELETE)\b/i);
-    assert.doesNotMatch(source, /\/stock\b|deleteProduct|updateProduct/i);
+    assert.doesNotMatch(source, /\b(?:PATCH|DELETE)\b/i);
+    assert.doesNotMatch(source, /\/stock\b|adjustStock|deleteProduct/i);
   }
   assert.doesNotMatch(
     `${html}\n${app}`,
-    /<(?:button|a)\b[^>]*>[\s\S]*?\b(?:editar|eliminar|borrar|ajustar stock|aumentar stock|disminuir stock)\b[\s\S]*?<\/(?:button|a)>/i
+    /<(?:button|a)\b[^>]*>[\s\S]*?\b(?:eliminar|borrar|ajustar stock|aumentar stock|disminuir stock)\b[\s\S]*?<\/(?:button|a)>/i
   );
 });
 

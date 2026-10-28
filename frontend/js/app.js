@@ -1,14 +1,14 @@
-import { getProducts } from "./api.js";
-import { createProduct } from "./api.js";
+import { getProducts, createProduct, updateProduct } from "./api.js";
 
 const genericErrorMessage = "No se pudieron cargar los productos. Inténtalo nuevamente.";
 const genericCreateErrorMessage = "No se pudo registrar el producto. Inténtalo nuevamente.";
+const genericUpdateErrorMessage = "No se pudo actualizar el producto. Inténtalo nuevamente.";
 
 function setVisible(element, visible) {
   element.hidden = !visible;
 }
 
-function renderProducts(products, tableBody) {
+function renderProducts(products, tableBody, onEdit) {
   tableBody.replaceChildren();
 
   for (const product of products) {
@@ -17,18 +17,27 @@ function renderProducts(products, tableBody) {
     const categoryCell = document.createElement("td");
     const priceCell = document.createElement("td");
     const stockCell = document.createElement("td");
+    const actionsCell = document.createElement("td");
+    const editButton = document.createElement("button");
 
     nameCell.textContent = product.name;
     categoryCell.textContent = product.category;
     priceCell.textContent = product.price;
     stockCell.textContent = String(product.stock);
 
-    row.append(nameCell, categoryCell, priceCell, stockCell);
+    editButton.type = "button";
+    editButton.className = "button button--secondary button--table";
+    editButton.textContent = "Editar";
+    editButton.setAttribute("aria-label", `Editar ${product.name}`);
+    editButton.addEventListener("click", () => onEdit(product, editButton));
+    actionsCell.appendChild(editButton);
+
+    row.append(nameCell, categoryCell, priceCell, stockCell, actionsCell);
     tableBody.appendChild(row);
   }
 }
 
-async function loadInventory() {
+async function loadInventory(onEdit) {
   const loadingState = document.getElementById("loading-state");
   const emptyState = document.getElementById("empty-state");
   const errorState = document.getElementById("error-state");
@@ -51,7 +60,7 @@ async function loadInventory() {
       return true;
     }
 
-    renderProducts(products, tableBody);
+    renderProducts(products, tableBody, onEdit);
     setVisible(table, true);
     return true;
   } catch (error) {
@@ -70,9 +79,15 @@ function setFormError(message) {
   setVisible(formError, Boolean(message));
 }
 
-function resetForm(form) {
+function setEditFormError(message) {
+  const formError = document.getElementById("edit-form-error");
+  formError.textContent = message;
+  setVisible(formError, Boolean(message));
+}
+
+function resetForm(form, clearError = setFormError) {
   form.reset();
-  setFormError("");
+  clearError("");
 }
 
 function initializeInventoryPage() {
@@ -82,6 +97,26 @@ function initializeInventoryPage() {
   const cancelButton = document.getElementById("cancel-create-product");
   const submitButton = document.getElementById("submit-create-product");
   const successState = document.getElementById("success-state");
+  const editPanel = document.getElementById("edit-product-panel");
+  const editForm = document.getElementById("edit-product-form");
+  const cancelEditButton = document.getElementById("cancel-edit-product");
+  const submitEditButton = document.getElementById("submit-edit-product");
+  let editTrigger = null;
+  let editingProductId = null;
+
+  function showEditForm(product, trigger) {
+    editTrigger = trigger;
+    editingProductId = product.id;
+    setVisible(createPanel, false);
+    setVisible(editPanel, true);
+    setVisible(successState, false);
+    setEditFormError("");
+    editForm.elements.name.value = product.name;
+    editForm.elements.description.value = product.description || "";
+    editForm.elements.category.value = product.category;
+    editForm.elements.price.value = product.price;
+    editForm.elements.name.focus();
+  }
 
   openButton.addEventListener("click", () => {
     setVisible(createPanel, true);
@@ -124,7 +159,7 @@ function initializeInventoryPage() {
       resetForm(createForm);
       setVisible(createPanel, false);
 
-      const refreshed = await loadInventory();
+      const refreshed = await loadInventory(showEditForm);
       successState.textContent = refreshed
         ? `Se registró el producto ${createdProduct.name}.`
         : `Se registró el producto ${createdProduct.name}, pero no se pudo actualizar el listado.`;
@@ -140,7 +175,55 @@ function initializeInventoryPage() {
     }
   });
 
-  loadInventory();
+  cancelEditButton.addEventListener("click", () => {
+    resetForm(editForm, setEditFormError);
+    setVisible(editPanel, false);
+    if (editTrigger) editTrigger.focus();
+  });
+
+  editForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setEditFormError("");
+    setVisible(successState, false);
+
+    const product = {
+      name: editForm.elements.name.value.trim(),
+      description: editForm.elements.description.value,
+      category: editForm.elements.category.value.trim(),
+      price: editForm.elements.price.value,
+    };
+
+    if (!product.name || !product.category) {
+      setEditFormError("El nombre y la categoría son obligatorios.");
+      return;
+    }
+
+    submitEditButton.disabled = true;
+    const originalSubmitLabel = submitEditButton.textContent;
+    submitEditButton.textContent = "Guardando…";
+
+    try {
+      const updatedProduct = await updateProduct(editingProductId, product);
+      resetForm(editForm, setEditFormError);
+      setVisible(editPanel, false);
+
+      const refreshed = await loadInventory(showEditForm);
+      successState.textContent = refreshed
+        ? `Se actualizó el producto ${updatedProduct.name}.`
+        : `Se actualizó el producto ${updatedProduct.name}, pero no se pudo actualizar el listado.`;
+      setVisible(successState, true);
+      openButton.focus();
+    } catch (error) {
+      setEditFormError(error instanceof Error && error.message
+        ? error.message
+        : genericUpdateErrorMessage);
+    } finally {
+      submitEditButton.disabled = false;
+      submitEditButton.textContent = originalSubmitLabel;
+    }
+  });
+
+  loadInventory(showEditForm);
 }
 
 document.addEventListener("DOMContentLoaded", initializeInventoryPage);

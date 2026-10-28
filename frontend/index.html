@@ -83,11 +83,48 @@
                 <th scope="col">Categoría</th>
                 <th scope="col">Precio</th>
                 <th scope="col">Stock</th>
+                <th scope="col">Acciones</th>
               </tr>
             </thead>
             <tbody id="products-list"></tbody>
           </table>
         </div>
+      </section>
+
+      <section id="edit-product-panel" class="form-panel" aria-labelledby="edit-product-title" hidden>
+        <div class="form-panel__header">
+          <h2 id="edit-product-title">Editar producto</h2>
+        </div>
+        <form id="edit-product-form">
+          <p id="edit-form-error" class="state-message state-message--error" role="alert" hidden></p>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="edit-product-name">Nombre</label>
+              <input id="edit-product-name" name="name" type="text" maxlength="100" required autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="edit-product-category">Categoría</label>
+              <input id="edit-product-category" name="category" type="text" maxlength="50" required autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="edit-product-price">Precio (ARS)</label>
+              <input id="edit-product-price" name="price" type="text" inputmode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" required aria-describedby="edit-price-help">
+              <small id="edit-price-help">Usa un importe no negativo con hasta dos decimales, por ejemplo 1500.00.</small>
+            </div>
+            <div class="form-field form-field--wide">
+              <label for="edit-product-description">Descripción (opcional)</label>
+              <textarea id="edit-product-description" name="description" maxlength="500" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button id="submit-edit-product" class="button button--primary" type="submit">
+              Guardar cambios
+            </button>
+            <button id="cancel-edit-product" class="button button--secondary" type="button">
+              Cancelar
+            </button>
+          </div>
+        </form>
       </section>
     </main>
   </body>
