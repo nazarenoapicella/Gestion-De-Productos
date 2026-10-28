@@ -12,7 +12,10 @@ const {
   adjustStock: adjustStockService,
   StockAdjustmentError,
 } = require("./services/stock.service");
+const summaryRepository = require("./repositories/summary.repository");
+const { getSummary: getSummaryService } = require("./services/summary.service");
 const { createProductsRouter } = require("./routes/products.routes");
+const { createSummaryRouter } = require("./routes/summary.routes");
 
 function createProductsService(database) {
   const repository = {
@@ -54,6 +57,20 @@ function createProductsService(database) {
     },
     adjustStock(id, input) {
       return adjustStockService(repository, Number(id), input);
+    },
+  };
+}
+
+function createSummaryService(database) {
+  const repository = {
+    getSummary() {
+      return summaryRepository.getSummary(database);
+    },
+  };
+
+  return {
+    getSummary() {
+      return getSummaryService(repository);
     },
   };
 }
@@ -100,6 +117,7 @@ function createApp({ database, productsService } = {}) {
 
   app.use(express.json());
   app.use("/api/products", createProductsRouter(service));
+  app.use("/api/summary", createSummaryRouter(createSummaryService(database)));
   app.use(errorHandler);
 
   return app;
