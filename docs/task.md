@@ -300,7 +300,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     9. Todos los casos de borde de la sección 8 de `spec.md` tienen una prueba automatizada o una comprobación manual documentada.
   - **Verificación:** `node --test backend/test/t20.integration.test.js` (1/1), `node --test frontend/test/t13.test.js frontend/test/t14.test.js frontend/test/t15.test.js frontend/test/t16.test.js frontend/test/t17.test.js frontend/test/t18.test.js frontend/test/t19.test.js` (46/46), `npm --prefix backend test` (109/109) y `git --no-pager diff --check`.
 
-- [ ] **T-21 — Documentar ejecución, pruebas y límites de uso**
+- [x] **T-21 — Documentar ejecución, pruebas y límites de uso**
   - **Agente:** Documentación, con verificación de Backend.
   - **Qué hace:** actualizar el README con los comandos reales de instalación, inicialización, ejecución y pruebas; describir la estructura implementada y recordar que el MVP no incluye autenticación. No documentar funciones que no existan.
   - **Archivos previstos:** `README.md` y, si el código final lo exige, los enlaces de `docs/plan.md` o `docs/task.md`.
@@ -311,6 +311,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     2. Con los comandos del README, crear `Mouse` con stock `5`, reiniciar el servidor y volver a consultar el producto devuelve el mismo stock `5`.
     3. El README explica que la versión sin autenticación es solo para uso local o controlado y no debe publicarse abiertamente en Internet.
     4. Los comandos documentados fueron ejecutados realmente; no quedan marcadores de posición ni instrucciones inventadas.
+  - **Verificación:** `cd backend && npm install`, `npm run db:init`, `npm start`, `curl http://localhost:3000/api/products`, `curl http://localhost:3000/api/summary`, `npm test` y `git --no-pager diff --check`.
 
 ---
 

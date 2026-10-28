@@ -1,24 +1,28 @@
 # Stock Simple
 
-[estado: documentación inicial — implementación todavía no iniciada]
-
-Aplicación web para gestionar los productos y el stock de un comercio pequeño. El objetivo de este proyecto es construir un sistema funcional de punta a punta con una interfaz web, una API de backend y una base de datos persistente, manteniendo reglas de negocio explícitas y fáciles de verificar.
+Aplicación web local para gestionar un catálogo de productos, el stock disponible y el resumen del inventario.
 
 ## Objetivo de la primera versión
 
-La versión inicial permitirá registrar, consultar, buscar, editar y eliminar productos; ajustar sus cantidades de stock; y ver un resumen del inventario y los productos con stock bajo.
+La versión inicial permite:
 
-El alcance contractual se encuentra en [`docs/spec.md`](docs/spec.md). Antes de cambiar el comportamiento del sistema, hay que revisar también [`docs/decisiones.md`](docs/decisiones.md) y [`docs/preguntas-abiertas.md`](docs/preguntas-abiertas.md).
+- listar productos registrados;
+- registrar un producto nuevo;
+- editar nombre, descripción, categoría y precio;
+- eliminar un producto con confirmación;
+- buscar y filtrar por categoría;
+- aumentar o disminuir stock con una operación explícita;
+- consultar el resumen del inventario.
 
-## Tecnologías previstas
+El alcance contractual se encuentra en [`docs/spec.md`](docs/spec.md), con decisiones relevantes en [`docs/decisiones.md`](docs/decisiones.md) y el plan técnico en [`docs/plan.md`](docs/plan.md).
 
-- **Frontend:** HTML, CSS y JavaScript sin framework.
-- **Backend:** Node.js y Express.
-- **Base de datos:** SQLite.
-- **Comunicación:** API REST con JSON, bajo el prefijo `/api`.
-- **Pruebas de backend:** módulo de pruebas integrado de Node.js (`node:test`) cuando comience la implementación.
+## Tecnologías
 
-Estas tecnologías son las elegidas para este proyecto inicial. No deben incorporarse frameworks, servicios externos ni dependencias adicionales sin una necesidad concreta y una decisión documentada.
+- Frontend: HTML, CSS y JavaScript sin framework.
+- Backend: Node.js y Express.
+- Persistencia: SQLite.
+- Comunicación: API REST bajo `/api`.
+- Pruebas: Node.js `node:test` para backend y frontend.
 
 ## Estructura del repositorio
 
@@ -28,47 +32,127 @@ stock-simple/
 ├── agents.md
 ├── .gitignore
 ├── docs/
-│   ├── ideas.md
 │   ├── decisiones.md
-│   ├── preguntas-abiertas.md
 │   ├── glosario.md
-│   └── spec.md
+│   ├── ideas.md
+│   ├── plan.md
+│   ├── preguntas-abiertas.md
+│   ├── spec.md
+│   └── task.md
 ├── rules/
-│   ├── analista-funcional.md
-│   ├── arquitectura.md
-│   ├── backend.md
-│   ├── base-de-datos.md
-│   ├── frontend.md
-│   ├── testing-qa.md
-│   └── documentacion.md
+│   ├── analista-funcional.mdc
+│   ├── arquitectura.mdc
+│   ├── backend.mdc
+│   ├── base-de-datos.mdc
+│   ├── documentacion.mdc
+│   ├── frontend.mdc
+│   └── testing-qa.mdc
 ├── backend/
 │   ├── .env.example
-│   └── (código del servidor, cuando se implemente)
-└── frontend/
-    └── (HTML, CSS y JavaScript de la interfaz, cuando se implemente)
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── src/
+│   │   ├── app.js
+│   │   ├── db/
+│   │   ├── routes/
+│   │   ├── controllers/
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   └── server.js
+│   └── test/
+├── frontend/
+│   ├── css/
+│   ├── js/
+│   ├── index.html
+│   └── test/
+└── data/
 ```
 
-## Estado actual
+## Requisitos
 
-En esta etapa se están definiendo el problema, las reglas de negocio, los límites de la primera versión y los criterios de aceptación. La carpeta `backend/` y la carpeta `frontend/` todavía no contienen una aplicación implementada.
+- Node.js 22.13.0 o superior.
+- npm.
+- Acceso local o dentro de un entorno controlado.
 
-## Criterios de trabajo
+## Instalación
 
-1. La especificación de [`docs/spec.md`](docs/spec.md) define el comportamiento esperado de la primera versión.
-2. No se deben inventar reglas de negocio ni cambiar decisiones documentadas de manera silenciosa.
-3. La validación de los datos debe realizarse en el backend, aunque el frontend también valide para ayudar al usuario.
-4. La interfaz no accede directamente a la base de datos: se comunica con el backend mediante la API.
-5. Cualquier cambio de alcance debe actualizar la documentación correspondiente antes o junto con el código.
-6. No se deben guardar secretos, contraseñas, bases de datos locales ni archivos `.env` reales en Git.
+Desde la raíz del proyecto:
 
-## Puesta en marcha
+```bash
+cd backend
+npm install
+```
 
-Todavía no hay código ejecutable, por lo que aún no existen comandos de instalación o inicio. Cuando se implemente la primera versión, esta sección deberá documentar los comandos reales y verificados para instalar dependencias, inicializar la base de datos, ejecutar las pruebas y arrancar el sistema.
+## Inicialización de la base de datos
 
-## Límite importante
+Este comando crea la base SQLite en `backend/data/stock-simple.sqlite` si no existe:
 
-La primera versión se plantea para uso local o en un entorno controlado, con un único operador y sin autenticación. **No debe exponerse a Internet ni utilizarse para gestionar datos reales en producción hasta incorporar y revisar autenticación, autorización y las medidas de seguridad necesarias.**
+```bash
+cd backend
+npm run db:init
+```
+
+## Ejecutar la aplicación
+
+Se sirve la interfaz y la API desde el mismo origen en `http://localhost:3000`:
+
+```bash
+cd backend
+npm start
+```
+
+Luego abre la URL en el navegador:
+
+```text
+http://localhost:3000
+```
+
+## Probar el backend
+
+```bash
+cd backend
+npm test
+```
+
+## Verificar la suma de stock y el resumen
+
+Con la aplicación levantada, puedes realizar una comprobación rápida de la API:
+
+```bash
+curl http://localhost:3000/api/products
+curl http://localhost:3000/api/summary
+```
+
+O crear un producto de prueba:
+
+```bash
+curl -X POST http://localhost:3000/api/products \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Mouse","category":"Periféricos","price":"1250.50","stock":5,"description":""}'
+```
+
+## Uso local y límite de seguridad
+
+La primera versión no incluye autenticación ni control de usuarios. Por eso debe usarse solo en:
+
+- entorno local del equipo;
+- entorno controlado del mismo comercio;
+- una red privada, no pública ni accesible desde Internet sin un diseño de seguridad adicional.
+
+No publicarla abiertamente ni usarla con datos reales de producción antes de implementar autenticación, autorización y medidas de seguridad apropiadas.
+
+## Verificación de persistencia
+
+Para comprobar que los cambios persisten tras reiniciar el servidor:
+
+1. levantá la aplicación con `npm start`;
+2. creá un producto con stock `5` desde la interfaz o por la API;
+3. detené el proceso;
+4. volvé a levantar la aplicación;
+5. consultá el producto y verificá que sigue con el mismo stock.
 
 ## Historial de cambios
 
 - [cambio] 2026-10-22 — Se crea la documentación inicial y se define el alcance provisional de la primera versión.
+- [cambio] 2026-10-28 — Se documentan los comandos reales de instalación, inicialización, ejecución y pruebas del MVP.
+- [cambio] 2026-10-28 — Se precisa que la versión actual es de uso local/controlado y sin autenticación.

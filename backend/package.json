@@ -9,6 +9,7 @@
   },
   "scripts": {
     "db:init": "node src/db",
+    "start": "node src/server.js",
     "test": "node --test"
   },
   "dependencies": {
