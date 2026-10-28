@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Consulta el inventario de productos de Stock Simple.">
+    <title>Inventario | Stock Simple</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script type="module" src="js/app.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="page-header">
+        <p class="eyebrow">Stock Simple</p>
+        <h1>Inventario</h1>
+        <p class="page-intro">Consulta los productos y las cantidades disponibles.</p>
+      </header>
+
+      <section class="inventory" aria-labelledby="inventory-title">
+        <h2 id="inventory-title">Productos</h2>
+
+        <p id="loading-state" class="state-message" role="status" aria-live="polite">
+          Cargando productos…
+        </p>
+
+        <p id="empty-state" class="state-message" role="status" aria-live="polite" hidden>
+          No hay productos registrados.
+        </p>
+
+        <p id="error-state" class="state-message state-message--error" role="alert" hidden></p>
+
+        <div class="table-scroll">
+          <table id="inventory-table" hidden>
+            <caption>Productos registrados en el inventario</caption>
+            <thead>
+              <tr>
+                <th scope="col">Nombre</th>
+                <th scope="col">Categoría</th>
+                <th scope="col">Precio</th>
+                <th scope="col">Stock</th>
+              </tr>
+            </thead>
+            <tbody id="products-list"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

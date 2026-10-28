@@ -1,0 +1,404 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const test = require('node:test');
+const vm = require('node:vm');
+
+const frontendRoot = path.resolve(__dirname, '..');
+
+function readDeliverable(relativePath) {
+  const filePath = path.join(frontendRoot, relativePath);
+  assert.ok(
+    fs.existsSync(filePath),
+    `Falta el entregable funcional de T-13: frontend/${relativePath}`
+  );
+  return fs.readFileSync(filePath, 'utf8');
+}
+
+function getInteractiveControls(html) {
+  return [...html.matchAll(/<(button|a|input|select|textarea)\b([^>]*)>([\s\S]*?)<\/\1>|<(input|select|textarea)\b([^>]*)\/?>/gi)]
+    .map(([, tag, attributes, contents, selfClosingTag, selfClosingAttributes]) => ({
+      tag: (tag || selfClosingTag).toLowerCase(),
+      attributes: attributes || selfClosingAttributes || '',
+      contents: contents || ''
+    }));
+}
+
+function accessibleName(control) {
+  const attributeName = control.attributes.match(/\b(?:aria-label|title|value)=["']([^"']+)["']/i);
+  const visibleName = control.contents.replace(/<[^>]*>/g, '').trim();
+  return (attributeName && attributeName[1]) || visibleName;
+}
+
+function createFakeDom(html) {
+  const elements = [];
+  const byId = new Map();
+  const events = new Map();
+
+  function makeElement(tagName) {
+    const classes = new Set();
+    const attributes = new Map();
+    const element = {
+      tagName: tagName.toUpperCase(),
+      children: [],
+      parentNode: null,
+      style: {},
+      hidden: false,
+      classList: {
+        add: (...names) => names.forEach((name) => classes.add(name)),
+        remove: (...names) => names.forEach((name) => classes.delete(name)),
+        contains: (name) => classes.has(name),
+        toggle: (name, force) => (force ?? !classes.has(name))
+          ? (classes.add(name), true)
+          : (classes.delete(name), false)
+      },
+      setAttribute(name, value) {
+        name = name.toLowerCase();
+        attributes.set(name, String(value));
+        if (name === 'hidden') this.hidden = true;
+        if (name === 'class') {
+          classes.clear();
+          String(value).split(/\s+/).filter(Boolean).forEach((name) => classes.add(name));
+        }
+        if (name === 'id') this.id = value;
+      },
+      getAttribute: (name) => attributes.get(name.toLowerCase()) ?? null,
+      removeAttribute(name) {
+        attributes.delete(name.toLowerCase());
+        if (name.toLowerCase() === 'hidden') this.hidden = false;
+      },
+      appendChild(child) {
+        if (child.parentNode) {
+          child.parentNode.children.splice(child.parentNode.children.indexOf(child), 1);
+        }
+        this.children.push(child);
+        child.parentNode = this;
+        return child;
+      },
+      append(...nodes) { nodes.forEach((node) => this.appendChild(typeof node === 'string' ? makeTextNode(node) : node)); },
+      replaceChildren(...nodes) { this.children = []; nodes.forEach((node) => this.appendChild(node)); },
+      addEventListener() {}
+    };
+
+    Object.defineProperty(element, 'id', {
+      get() {
+        return attributes.get('id') || '';
+      },
+      set(value) {
+        const id = String(value);
+        attributes.set('id', id);
+        byId.set(id, element);
+      }
+    });
+    Object.defineProperty(element, 'textContent', {
+      get() {
+        return (element._text || '') + element.children.map((child) => child.textContent).join('');
+      },
+      set(value) {
+        element._text = String(value ?? '');
+        this.replaceChildren();
+      }
+    });
+    Object.defineProperty(element, 'innerText', {
+      get() {
+        return element.textContent;
+      },
+      set(value) {
+        element.textContent = value;
+      }
+    });
+
+    elements.push(element);
+    return element;
+  }
+
+  const makeTextNode = (text) => ({ textContent: text, parentNode: null });
+  const openingTags = /<([a-z][\w-]*)\b([^>]*)>/gi;
+  for (const [, tagName, rawAttributes] of html.matchAll(openingTags)) {
+    const element = makeElement(tagName);
+    for (const [, name, doubleQuoted, singleQuoted, unquoted] of rawAttributes.matchAll(/([:\w-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g)) {
+      element.setAttribute(name, doubleQuoted ?? singleQuoted ?? unquoted ?? '');
+    }
+  }
+
+  function find(selector) {
+    const id = selector.match(/#([\w-]+)/);
+    if (id) return byId.get(id[1]) || null;
+    const tag = selector.match(/\b(table|tbody|thead|tr|main)\b/i);
+    if (tag) return elements.find((element) => element.tagName.toLowerCase() === tag[1].toLowerCase()) || null;
+    const className = selector.match(/\.([\w-]+)/);
+    return elements.find((element) => element.classList.contains(className && className[1])) || null;
+  }
+
+  const document = {
+    readyState: 'loading',
+    createElement: makeElement,
+    getElementById: (id) => byId.get(id) || null,
+    querySelector: find,
+    querySelectorAll: (selector) => [find(selector)].filter(Boolean),
+    addEventListener(name, callback) {
+      if (!events.has(name)) events.set(name, []);
+      events.get(name).push(callback);
+    }
+  };
+  const windowEvents = new Map();
+  const window = {
+    document,
+    addEventListener(name, callback) {
+      if (!windowEvents.has(name)) windowEvents.set(name, []);
+      windowEvents.get(name).push(callback);
+    }
+  };
+
+  return {
+    document,
+    window,
+    getById: (id) => byId.get(id) || null,
+    find,
+    dispatchReady() {
+      for (const callback of events.get('DOMContentLoaded') || []) callback();
+      if (!(events.get('DOMContentLoaded') || []).length) {
+        for (const callback of windowEvents.get('DOMContentLoaded') || []) callback();
+      }
+    }
+  };
+}
+
+function isVisible(element) {
+  return Boolean(element) &&
+    !element.hidden &&
+    element.style.display !== 'none' &&
+    element.getAttribute('aria-hidden') !== 'true' &&
+    !['hidden', 'is-hidden', 'd-none'].some((name) => element.classList.contains(name));
+}
+
+async function settlePromises() {
+  for (let index = 0; index < 5; index += 1) {
+    await Promise.resolve();
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+}
+
+async function runAppWithProducts(productsOrError, defer = false) {
+  const html = readDeliverable('index.html');
+  const source = readDeliverable(path.join('js', 'app.js'));
+  const dom = createFakeDom(html);
+  let resolveProducts;
+  let rejectProducts;
+  let getProductsCalls = 0;
+  const pending = new Promise((resolve, reject) => {
+    resolveProducts = resolve;
+    rejectProducts = reject;
+  });
+  const getProducts = () => {
+    getProductsCalls += 1;
+    if (defer) return pending;
+    if (productsOrError instanceof Error) return Promise.reject(productsOrError);
+    return Promise.resolve(productsOrError);
+  };
+  const context = vm.createContext({
+    document: dom.document,
+    window: Object.assign(dom.window, { getProducts, api: { getProducts } }),
+    getProducts,
+    ProductAPI: { getProducts },
+    console,
+    setTimeout,
+    clearTimeout,
+    Promise
+  });
+  const getProductsImport = /^\s*import\s+\{\s*getProducts\s*\}\s+from\s+['"][^'"]*api\.js['"]\s*;?\s*$/gm;
+  const appSource = source.replace(getProductsImport, '');
+  new vm.Script(appSource, { filename: 'frontend/js/app.js' }).runInContext(context);
+  dom.dispatchReady();
+
+  return {
+    ...dom,
+    getProductsCalls: () => getProductsCalls,
+    resolveProducts,
+    rejectProducts,
+    settle: settlePromises
+  };
+}
+
+function tableRows(dom) {
+  const body = dom.find('tbody');
+  return body ? body.children.filter((child) => child.tagName === 'TR') : [];
+}
+
+function rowCells(row) {
+  return row.children
+    .filter((child) => child.tagName === 'TD')
+    .map((cell) => cell.textContent);
+}
+
+test('el HTML define la página española, el área principal y una tabla semántica accesible', () => {
+  const html = readDeliverable('index.html');
+
+  assert.match(html, /<html\b[^>]*\blang=["']es["']/i);
+  assert.match(html, /<main\b/i);
+  assert.match(html, /<h1\b/i);
+  assert.match(html, /<table\b/i);
+  assert.match(html, /<caption\b[^>]*>[\s\S]*?<\/caption>/i);
+
+  const headers = [...html.matchAll(/<th\b([^>]*)>([\s\S]*?)<\/th>/gi)]
+    .map(([, attributes, contents]) => ({
+      attributes,
+      text: contents.replace(/<[^>]*>/g, '').trim()
+    }));
+
+  for (const label of ['Nombre', 'Categoría', 'Precio', 'Stock']) {
+    assert.ok(
+      headers.some(({ attributes, text }) =>
+        /\bscope=["']col["']/i.test(attributes) && text.toLocaleLowerCase('es') === label.toLocaleLowerCase('es')
+      ),
+      `Falta la columna semántica ${label}`
+    );
+  }
+  assert.ok(
+    !headers.some(({ text }) => /\bacciones\b/i.test(text)),
+    'T-13 no debe mostrar una columna de acciones pendientes'
+  );
+});
+
+test('la página ofrece regiones identificables para carga, inventario vacío y error', () => {
+  const html = readDeliverable('index.html');
+  const app = readDeliverable(path.join('js', 'app.js'));
+
+  for (const state of ['loading-state', 'empty-state', 'error-state']) {
+    assert.match(html, new RegExp(`\\bid=["']${state}["']`, 'i'));
+    assert.match(app, new RegExp(state));
+  }
+  const emptyStateTag = html.match(/<[a-z][\w-]*\b(?=[^>]*\bid=["']empty-state["'])[^>]*>/i);
+  assert.ok(emptyStateTag, 'Falta el elemento del estado vacío');
+  assert.match(
+    emptyStateTag[0],
+    /\brole=["']status["']|\baria-live=["']polite["']/i,
+    'El estado vacío debe anunciarse con role=status o aria-live=polite'
+  );
+  assert.match(html, /aria-live=["']polite["']/i);
+  assert.match(html, /role=["']alert["']/i);
+  assert.match(app, /loading-state|empty-state|error-state/);
+});
+
+test('el inventario vacío explica que no hay productos y no ofrece CTA de alta ni formulario T-14', () => {
+  const html = readDeliverable('index.html');
+  const plainText = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+  const controls = getInteractiveControls(html);
+
+  assert.match(plainText, /\b(?:inventario|productos)\b/i);
+  assert.match(plainText, /\b(?:no hay|vac[ií]o|sin productos)\b/i);
+  assert.doesNotMatch(html, /<form\b/i);
+
+  for (const control of controls) {
+    assert.doesNotMatch(
+      accessibleName(control),
+      /\b(?:agregar|añadir|crear|registrar|nuevo producto|alta)\b/i,
+      'No debe presentarse una opción de alta antes de T-14'
+    );
+  }
+});
+
+test('la capa API obtiene el listado y convierte respuestas fallidas en errores comprensibles', () => {
+  const api = readDeliverable(path.join('js', 'api.js'));
+
+  assert.match(api, /fetch\s*\(/);
+  assert.match(api, /['"`]\/api\/products(?:\?[^'"`]*)?['"`]/);
+  assert.match(api, /method\s*:\s*['"]GET['"]|fetch\s*\(\s*['"`]\/api\/products/i);
+  assert.match(api, /response\.ok/);
+  assert.match(api, /response\.json\s*\(/);
+  assert.match(api, /error\.message|message/);
+  assert.match(api, /throw\s+(?:new\s+)?Error|throw\s+/);
+});
+
+test('la interfaz ejecutada renderiza productos del API en celdas, en orden y como texto', async () => {
+  const maliciousName = 'Mouse <img src=x onerror=alert(1)>';
+  const products = [
+    { name: 'Mouse', category: 'Periféricos', price: '1250.50', stock: 5 },
+    { name: maliciousName, category: 'Periféricos', price: '700.25', stock: 3 },
+    { name: 'Teclado', category: 'Periféricos', price: '900.00', stock: 2 }
+  ];
+  const dom = await runAppWithProducts(products);
+  await dom.settle();
+
+  assert.ok(dom.getProductsCalls() > 0, 'la aplicación debe solicitar los productos a getProducts');
+  assert.deepEqual(
+    tableRows(dom).map(rowCells),
+    [
+      ['Mouse', 'Periféricos', '1250.50', '5'],
+      [maliciousName, 'Periféricos', '700.25', '3'],
+      ['Teclado', 'Periféricos', '900.00', '2']
+    ]
+  );
+  assert.equal(dom.find('img'), null, 'el nombre recibido no debe crear elementos HTML');
+});
+
+test('el renderizado crea texto seguro y conserva el orden recibido del API', () => {
+  const app = readDeliverable(path.join('js', 'app.js'));
+
+  assert.match(app, /textContent/);
+  assert.match(app, /createElement/);
+  assert.match(app, /for\s*\(\s*(?:const|let|var)\s+\w+\s+of\s+products\b|products\s*\.\s*(?:forEach|map)\s*\(/);
+  assert.doesNotMatch(app, /\.innerHTML\b|insertAdjacentHTML\s*\(/);
+  assert.doesNotMatch(app, /\.sort\s*\(/);
+});
+
+test('la interfaz ejecutada mantiene loading y presenta correctamente inventario vacío y error', async () => {
+  const loadingDom = await runAppWithProducts([], true);
+  assert.ok(loadingDom.getProductsCalls() > 0);
+  assert.ok(isVisible(loadingDom.getById('loading-state')), 'la carga debe mostrarse mientras espera la API');
+
+  loadingDom.resolveProducts([]);
+  await loadingDom.settle();
+  assert.ok(isVisible(loadingDom.getById('empty-state')), 'la respuesta vacía debe mostrar su estado');
+  assert.equal(tableRows(loadingDom).length, 0);
+
+  const errorDom = await runAppWithProducts(new Error('Servicio no disponible'));
+  await errorDom.settle();
+  assert.ok(isVisible(errorDom.getById('error-state')), 'el fallo de API debe mostrar el estado de error');
+  assert.equal(isVisible(errorDom.getById('empty-state')), false);
+  assert.equal(tableRows(errorDom).length, 0);
+});
+
+test('los errores no se convierten en una lista vacía exitosa ni en datos ficticios', () => {
+  const app = readDeliverable(path.join('js', 'app.js'));
+
+  assert.match(app, /catch\s*\(/);
+  assert.match(app, /error-state/);
+  assert.match(app, /textContent/);
+  assert.doesNotMatch(app, /(?:const|let|var)\s+\w*(?:mock|sample|demo|fake)\w*\s*=/i);
+  assert.doesNotMatch(app, /(?:const|let|var)\s+\w*(?:products|inventory|items)\s*=\s*\[\s*\{/i);
+  assert.doesNotMatch(app, /catch\s*\([^)]*\)\s*\{[^}]*products\s*=\s*\[\]/s);
+});
+
+test('T-13 no presenta controles de operaciones pendientes ni implementa sus solicitudes', () => {
+  const html = readDeliverable('index.html');
+  const api = readDeliverable(path.join('js', 'api.js'));
+  const app = readDeliverable(path.join('js', 'app.js'));
+
+  for (const source of [html, api, app]) {
+    assert.doesNotMatch(source, /\b(?:POST|PUT|PATCH|DELETE)\b/i);
+    assert.doesNotMatch(source, /\/stock\b|deleteProduct|updateProduct|createProduct/i);
+  }
+  assert.doesNotMatch(
+    `${html}\n${app}`,
+    /<(?:button|a)\b[^>]*>[\s\S]*?\b(?:editar|eliminar|borrar|ajustar stock|aumentar stock|disminuir stock)\b[\s\S]*?<\/(?:button|a)>/i
+  );
+});
+
+test('los controles existentes tienen nombre accesible y foco visible para teclado', () => {
+  const html = readDeliverable('index.html');
+  const css = readDeliverable(path.join('css', 'styles.css'));
+  const controls = getInteractiveControls(html);
+
+  for (const control of controls) {
+    assert.ok(accessibleName(control), `El control <${control.tag}> debe tener un nombre accesible`);
+    if (control.tag === 'a') {
+      assert.match(control.attributes, /\bhref=["'][^"']+["']/i, 'El enlace debe poder operarse con teclado');
+    }
+  }
+
+  if (controls.length > 0) {
+    assert.match(css, /:focus-visible|:focus\b/i);
+    assert.match(css, /outline\s*:/i);
+  }
+});
