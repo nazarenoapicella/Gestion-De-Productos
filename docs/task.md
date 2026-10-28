@@ -282,7 +282,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 
 **Objetivo:** comprobar el comportamiento de punta a punta y dejar instrucciones fiables para ejecutar el proyecto.
 
-- [ ] **T-20 — Ejecutar pruebas integrales y corregir regresiones del MVP**
+- [x] **T-20 — Ejecutar pruebas integrales y corregir regresiones del MVP**
   - **Agente:** Testing y QA, con participación de Backend y Frontend para corregir defectos.
   - **Qué hace:** verificar el recorrido completo desde la interfaz hasta SQLite, cubrir las siete historias de usuario y revisar los casos límite de `spec.md`. Mantener los casos automatizados donde sea razonable y documentar los controles manuales que queden.
   - **Archivos previstos:** `backend/test/`, pruebas de integración/e2e si se incorporan, y correcciones pequeñas en los módulos con fallos.
@@ -298,6 +298,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     7. Tras crear un producto, detener y volver a iniciar el servidor conserva el producto y sus datos.
     8. Una petición inválida enviada directamente a la API, sin usar el formulario, es rechazada y no modifica la base.
     9. Todos los casos de borde de la sección 8 de `spec.md` tienen una prueba automatizada o una comprobación manual documentada.
+  - **Verificación:** `node --test backend/test/t20.integration.test.js` (1/1), `node --test frontend/test/t13.test.js frontend/test/t14.test.js frontend/test/t15.test.js frontend/test/t16.test.js frontend/test/t17.test.js frontend/test/t18.test.js frontend/test/t19.test.js` (46/46), `npm --prefix backend test` (109/109) y `git --no-pager diff --check`.
 
 - [ ] **T-21 — Documentar ejecución, pruebas y límites de uso**
   - **Agente:** Documentación, con verificación de Backend.
