@@ -54,6 +54,114 @@ h1 {
   font-size: 1.05rem;
 }
 
+.button {
+  min-height: 2.75rem;
+  padding: 0.65rem 1rem;
+  border: 2px solid transparent;
+  border-radius: 0.4rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button--primary {
+  margin-top: 1.25rem;
+  color: #fff;
+  background: #245c78;
+}
+
+.button--primary:hover {
+  background: #19465d;
+}
+
+.button--secondary {
+  color: #203d50;
+  border-color: #9cabb6;
+  background: #fff;
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #d27a00;
+  outline-offset: 3px;
+}
+
+.form-panel {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border: 1px solid #d5dfe6;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 0.5rem 1.5rem rgb(23 43 58 / 6%);
+}
+
+.form-panel__header h2 {
+  margin-bottom: 1.25rem;
+  font-size: 1.25rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+}
+
+.form-field {
+  display: grid;
+  align-content: start;
+  gap: 0.4rem;
+}
+
+.form-field--wide {
+  grid-column: 1 / -1;
+}
+
+.form-field label {
+  font-weight: 650;
+}
+
+.form-field input,
+.form-field textarea {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #8294a1;
+  border-radius: 0.35rem;
+  color: #172b3a;
+  background: #fff;
+  font: inherit;
+}
+
+.form-field textarea {
+  resize: vertical;
+}
+
+.form-field small {
+  color: #4a5d6b;
+  line-height: 1.4;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.state-message--success {
+  margin-bottom: 1.5rem;
+  border: 1px solid #9bbda7;
+  border-radius: 0.5rem;
+  color: #174b2a;
+  background: #f0f8f2;
+}
+
 .inventory {
   overflow: hidden;
   border: 1px solid #d5dfe6;
@@ -124,6 +232,14 @@ tbody tr:last-child td {
 }
 
 @media (max-width: 38rem) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-field--wide {
+    grid-column: auto;
+  }
+
   th,
   td {
     padding: 0.75rem 1rem;

@@ -20,20 +20,32 @@ function getInteractiveControls(html) {
     .map(([, tag, attributes, contents, selfClosingTag, selfClosingAttributes]) => ({
       tag: (tag || selfClosingTag).toLowerCase(),
       attributes: attributes || selfClosingAttributes || '',
-      contents: contents || ''
+      contents: contents || '',
+      html
     }));
 }
 
 function accessibleName(control) {
   const attributeName = control.attributes.match(/\b(?:aria-label|title|value)=["']([^"']+)["']/i);
   const visibleName = control.contents.replace(/<[^>]*>/g, '').trim();
-  return (attributeName && attributeName[1]) || visibleName;
+  if (attributeName && attributeName[1]) return attributeName[1];
+  if (visibleName) return visibleName;
+
+  const id = control.attributes.match(/\bid=["']([^"']+)["']/i);
+  if (!id) return '';
+  const escapedId = id[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const label = new RegExp(
+    `<label\\b[^>]*\\bfor=["']${escapedId}["'][^>]*>([\\s\\S]*?)<\\/label>`,
+    'i'
+  ).exec(control.html || '');
+  return label ? label[1].replace(/<[^>]*>/g, '').trim() : '';
 }
 
 function createFakeDom(html) {
   const elements = [];
   const byId = new Map();
   const events = new Map();
+  let activeElement = null;
 
   function makeElement(tagName) {
     const classes = new Set();
@@ -44,6 +56,7 @@ function createFakeDom(html) {
       parentNode: null,
       style: {},
       hidden: false,
+      value: '',
       classList: {
         add: (...names) => names.forEach((name) => classes.add(name)),
         remove: (...names) => names.forEach((name) => classes.delete(name)),
@@ -56,6 +69,7 @@ function createFakeDom(html) {
         name = name.toLowerCase();
         attributes.set(name, String(value));
         if (name === 'hidden') this.hidden = true;
+        if (name === 'value') this.value = String(value);
         if (name === 'class') {
           classes.clear();
           String(value).split(/\s+/).filter(Boolean).forEach((name) => classes.add(name));
@@ -69,15 +83,43 @@ function createFakeDom(html) {
       },
       appendChild(child) {
         if (child.parentNode) {
-          child.parentNode.children.splice(child.parentNode.children.indexOf(child), 1);
+          const index = child.parentNode.children.indexOf(child);
+          if (index >= 0) child.parentNode.children.splice(index, 1);
         }
         this.children.push(child);
         child.parentNode = this;
         return child;
       },
       append(...nodes) { nodes.forEach((node) => this.appendChild(typeof node === 'string' ? makeTextNode(node) : node)); },
-      replaceChildren(...nodes) { this.children = []; nodes.forEach((node) => this.appendChild(node)); },
-      addEventListener() {}
+      replaceChildren(...nodes) {
+        this.children.forEach((child) => { child.parentNode = null; });
+        this.children = [];
+        nodes.forEach((node) => this.appendChild(node));
+      },
+      reset() {
+        for (const control of descendants(this, 'input, textarea, select')) {
+          control.value = control.getAttribute('value') || '';
+        }
+      },
+      focus() { activeElement = this; },
+      addEventListener(name, callback) {
+        if (!events.has(this)) events.set(this, new Map());
+        const listeners = events.get(this);
+        if (!listeners.has(name)) listeners.set(name, []);
+        listeners.get(name).push(callback);
+      },
+      dispatch(name, event = {}) {
+        const actualEvent = {
+          target: this,
+          currentTarget: this,
+          defaultPrevented: false,
+          preventDefault() { this.defaultPrevented = true; },
+          ...event
+        };
+        for (const callback of events.get(this)?.get(name) || []) callback(actualEvent);
+        return actualEvent;
+      },
+      click() { return this.dispatch('click'); }
     };
 
     Object.defineProperty(element, 'id', {
@@ -88,6 +130,35 @@ function createFakeDom(html) {
         const id = String(value);
         attributes.set('id', id);
         byId.set(id, element);
+      }
+    });
+    Object.defineProperty(element, 'name', {
+      get() { return attributes.get('name') || ''; },
+      set(value) { this.setAttribute('name', value); }
+    });
+    Object.defineProperty(element, 'type', {
+      get() { return attributes.get('type') || ''; },
+      set(value) { this.setAttribute('type', value); }
+    });
+    Object.defineProperty(element, 'elements', {
+      get() {
+        if (this.tagName !== 'FORM') return undefined;
+        const controls = descendants(this, 'input, textarea, select, button, fieldset, object, output');
+        return new Proxy(controls, {
+          get(target, property, receiver) {
+            if (property === 'namedItem') {
+              return (name) => target.find((control) =>
+                control.name === name || control.id === name
+              ) || null;
+            }
+            if (typeof property === 'string' && !/^\d+$/.test(property) && !(property in target)) {
+              return target.find((control) =>
+                control.name === property || control.id === property
+              );
+            }
+            return Reflect.get(target, property, receiver);
+          }
+        });
       }
     });
     Object.defineProperty(element, 'textContent', {
@@ -113,18 +184,50 @@ function createFakeDom(html) {
   }
 
   const makeTextNode = (text) => ({ textContent: text, parentNode: null });
-  const openingTags = /<([a-z][\w-]*)\b([^>]*)>/gi;
-  for (const [, tagName, rawAttributes] of html.matchAll(openingTags)) {
+  function descendants(root, selector) {
+    const tags = selector.split(',').map((part) => part.trim().toLowerCase());
+    const found = [];
+    function visit(parent) {
+      for (const child of parent.children || []) {
+        if (child.tagName && tags.includes(child.tagName.toLowerCase())) found.push(child);
+        visit(child);
+      }
+    }
+    visit(root);
+    return found;
+  }
+
+  const root = makeElement('document');
+  const stack = [root];
+  const voidTags = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+  const tagPattern = /<!--[\s\S]*?-->|<\/?([a-z][\w-]*)\b([^>]*)>/gi;
+  let textStart = 0;
+  for (const match of html.matchAll(tagPattern)) {
+    const text = html.slice(textStart, match.index);
+    if (text) stack[stack.length - 1].appendChild(makeTextNode(text));
+    textStart = match.index + match[0].length;
+    if (match[0].startsWith('<!--')) continue;
+    const tagName = match[1].toLowerCase();
+    if (match[0].startsWith('</')) {
+      const index = stack.findLastIndex((element) => element.tagName.toLowerCase() === tagName);
+      if (index > 0) stack.length = index;
+      continue;
+    }
+    const rawAttributes = match[2] || '';
     const element = makeElement(tagName);
     for (const [, name, doubleQuoted, singleQuoted, unquoted] of rawAttributes.matchAll(/([:\w-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g)) {
       element.setAttribute(name, doubleQuoted ?? singleQuoted ?? unquoted ?? '');
     }
+    stack[stack.length - 1].appendChild(element);
+    if (!voidTags.has(tagName) && !rawAttributes.trimEnd().endsWith('/')) stack.push(element);
   }
+  const trailingText = html.slice(textStart);
+  if (trailingText) stack[stack.length - 1].appendChild(makeTextNode(trailingText));
 
   function find(selector) {
     const id = selector.match(/#([\w-]+)/);
     if (id) return byId.get(id[1]) || null;
-    const tag = selector.match(/\b(table|tbody|thead|tr|main)\b/i);
+    const tag = selector.match(/\b(table|tbody|thead|tr|main|form|label|input|button)\b/i);
     if (tag) return elements.find((element) => element.tagName.toLowerCase() === tag[1].toLowerCase()) || null;
     const className = selector.match(/\.([\w-]+)/);
     return elements.find((element) => element.classList.contains(className && className[1])) || null;
@@ -136,18 +239,14 @@ function createFakeDom(html) {
     getElementById: (id) => byId.get(id) || null,
     querySelector: find,
     querySelectorAll: (selector) => [find(selector)].filter(Boolean),
+    get activeElement() { return activeElement; },
     addEventListener(name, callback) {
       if (!events.has(name)) events.set(name, []);
       events.get(name).push(callback);
     }
   };
-  const windowEvents = new Map();
   const window = {
-    document,
-    addEventListener(name, callback) {
-      if (!windowEvents.has(name)) windowEvents.set(name, []);
-      windowEvents.get(name).push(callback);
-    }
+    document
   };
 
   return {
@@ -157,9 +256,6 @@ function createFakeDom(html) {
     find,
     dispatchReady() {
       for (const callback of events.get('DOMContentLoaded') || []) callback();
-      if (!(events.get('DOMContentLoaded') || []).length) {
-        for (const callback of windowEvents.get('DOMContentLoaded') || []) callback();
-      }
     }
   };
 }
@@ -201,13 +297,16 @@ async function runAppWithProducts(productsOrError, defer = false) {
     window: Object.assign(dom.window, { getProducts, api: { getProducts } }),
     getProducts,
     ProductAPI: { getProducts },
+    createProduct: async () => {
+      throw new Error('createProduct no configurado para una prueba de lectura');
+    },
     console,
     setTimeout,
     clearTimeout,
     Promise
   });
-  const getProductsImport = /^\s*import\s+\{\s*getProducts\s*\}\s+from\s+['"][^'"]*api\.js['"]\s*;?\s*$/gm;
-  const appSource = source.replace(getProductsImport, '');
+  const apiImports = /^\s*import\s+\{[^}]+\}\s+from\s+['"][^'"]*api\.js['"]\s*;?\s*$/gm;
+  const appSource = source.replace(apiImports, '');
   new vm.Script(appSource, { filename: 'frontend/js/app.js' }).runInContext(context);
   dom.dispatchReady();
 
@@ -280,22 +379,32 @@ test('la página ofrece regiones identificables para carga, inventario vacío y 
   assert.match(app, /loading-state|empty-state|error-state/);
 });
 
-test('el inventario vacío explica que no hay productos y no ofrece CTA de alta ni formulario T-14', () => {
+test('el alta de T-14 está disponible con formulario accesible y el estado vacío conserva su explicación', async () => {
   const html = readDeliverable('index.html');
   const plainText = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
   const controls = getInteractiveControls(html);
 
   assert.match(plainText, /\b(?:inventario|productos)\b/i);
   assert.match(plainText, /\b(?:no hay|vac[ií]o|sin productos)\b/i);
-  assert.doesNotMatch(html, /<form\b/i);
-
-  for (const control of controls) {
-    assert.doesNotMatch(
-      accessibleName(control),
-      /\b(?:agregar|añadir|crear|registrar|nuevo producto|alta)\b/i,
-      'No debe presentarse una opción de alta antes de T-14'
+  assert.match(html, /<form\b[^>]*\bid=["']create-product-form["']/i);
+  assert.match(html, /<section\b[^>]*\bid=["']create-product-panel["'][^>]*\bhidden\b/i);
+  for (const name of ['name', 'category', 'price', 'stock', 'description']) {
+    assert.ok(
+      controls.some((control) =>
+        new RegExp(`\\bname=["']${name}["']`, 'i').test(control.attributes) &&
+        accessibleName(control)
+      ),
+      `El campo ${name} debe tener una etiqueta accesible`
     );
   }
+
+  const dom = await runAppWithProducts([]);
+  await dom.settle();
+  const openButton = dom.getById('open-create-product');
+  assert.ok(openButton, 'El alta debe tener un control visible y operable');
+  openButton.click();
+  assert.equal(isVisible(dom.getById('create-product-panel')), true);
+  assert.equal(dom.document.activeElement, dom.getById('product-name'));
 });
 
 test('la capa API obtiene el listado y convierte respuestas fallidas en errores comprensibles', () => {
@@ -370,14 +479,14 @@ test('los errores no se convierten en una lista vacía exitosa ni en datos ficti
   assert.doesNotMatch(app, /catch\s*\([^)]*\)\s*\{[^}]*products\s*=\s*\[\]/s);
 });
 
-test('T-13 no presenta controles de operaciones pendientes ni implementa sus solicitudes', () => {
+test('la UI permite GET y POST de alta, pero no adelanta edición, eliminación ni ajuste de stock', () => {
   const html = readDeliverable('index.html');
   const api = readDeliverable(path.join('js', 'api.js'));
   const app = readDeliverable(path.join('js', 'app.js'));
 
   for (const source of [html, api, app]) {
-    assert.doesNotMatch(source, /\b(?:POST|PUT|PATCH|DELETE)\b/i);
-    assert.doesNotMatch(source, /\/stock\b|deleteProduct|updateProduct|createProduct/i);
+    assert.doesNotMatch(source, /\b(?:PUT|PATCH|DELETE)\b/i);
+    assert.doesNotMatch(source, /\/stock\b|deleteProduct|updateProduct/i);
   }
   assert.doesNotMatch(
     `${html}\n${app}`,

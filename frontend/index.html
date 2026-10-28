@@ -14,7 +14,52 @@
         <p class="eyebrow">Stock Simple</p>
         <h1>Inventario</h1>
         <p class="page-intro">Consulta los productos y las cantidades disponibles.</p>
+        <button id="open-create-product" class="button button--primary" type="button">
+          Registrar producto
+        </button>
       </header>
+
+      <section id="create-product-panel" class="form-panel" aria-labelledby="create-product-title" hidden>
+        <div class="form-panel__header">
+          <h2 id="create-product-title">Registrar producto</h2>
+        </div>
+        <form id="create-product-form">
+          <p id="form-error" class="state-message state-message--error" role="alert" hidden></p>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="product-name">Nombre</label>
+              <input id="product-name" name="name" type="text" maxlength="100" required autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="product-category">Categoría</label>
+              <input id="product-category" name="category" type="text" maxlength="50" required autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="product-price">Precio (ARS)</label>
+              <input id="product-price" name="price" type="text" inputmode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" required aria-describedby="price-help">
+              <small id="price-help">Usa un importe no negativo con hasta dos decimales, por ejemplo 1250.50.</small>
+            </div>
+            <div class="form-field">
+              <label for="product-stock">Stock inicial</label>
+              <input id="product-stock" name="stock" type="number" min="0" step="1" required>
+            </div>
+            <div class="form-field form-field--wide">
+              <label for="product-description">Descripción (opcional)</label>
+              <textarea id="product-description" name="description" maxlength="500" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button id="submit-create-product" class="button button--primary" type="submit">
+              Guardar producto
+            </button>
+            <button id="cancel-create-product" class="button button--secondary" type="button">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <p id="success-state" class="state-message state-message--success" role="status" aria-live="polite" hidden></p>
 
       <section class="inventory" aria-labelledby="inventory-title">
         <h2 id="inventory-title">Productos</h2>
