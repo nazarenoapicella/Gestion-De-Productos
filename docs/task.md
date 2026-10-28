@@ -36,7 +36,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     3. La base rechaza un registro con `price_cents = -1` y otro con `stock = -1`.
     4. Se guarda un producto `Mouse`, categoría `Periféricos`, `price_cents = 125050` y `stock = 5`; después de cerrar y volver a abrir la conexión, siguen existiendo los mismos valores.
 
-- [ ] **T-02 — Implementar el repositorio de productos**
+- [x] **T-02 — Implementar el repositorio de productos**
   - **Agente:** Backend.
   - **Qué hace:** implementar las operaciones de acceso a datos para crear, obtener por identificador, listar, actualizar y eliminar productos. Usar consultas parametrizadas y devolver resultados claros cuando el identificador no exista.
   - **Archivos previstos:** `backend/src/repositories/products.repository.js` y sus pruebas unitarias.
