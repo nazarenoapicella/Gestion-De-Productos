@@ -187,7 +187,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 
 **Objetivo:** implementar la interfaz con HTML, CSS y JavaScript sin framework. Todo dato persistente se obtiene y modifica por la API.
 
-- [ ] **T-13 — Crear la pantalla principal y el listado**
+- [x] **T-13 — Crear la pantalla principal y el listado**
   - **Agente:** Frontend.
   - **Qué hace:** crear la estructura de la página, tabla de productos y estados de carga, inventario vacío y error del servidor. Mostrar nombre, categoría, precio y stock; no incluir controles para operaciones aún no implementadas.
   - **Archivos previstos:** `frontend/index.html`, `frontend/css/styles.css`, `frontend/js/api.js`, `frontend/js/app.js`.
@@ -198,6 +198,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     2. Con `Mouse`, categoría `Periféricos`, precio `1250.50` y stock `5`, la fila muestra esos datos y no presenta controles decorativos para acciones pendientes.
     3. Si la API devuelve un error, se muestra un mensaje comprensible y no se inventa una lista vacía o datos de ejemplo como si fueran reales.
     4. Se puede recorrer la pantalla y operar sus controles existentes mediante teclado, con foco visible y nombres accesibles.
+  - **Verificación:** `node --test frontend/test/t13.test.js` (10/10) y `npm --prefix backend test` (108/108).
 
 - [ ] **T-14 — Crear el formulario de alta de productos**
   - **Agente:** Frontend.
