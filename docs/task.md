@@ -135,7 +135,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     4. Enviar stock `-1` o `1.5` responde `400` y no crea registros.
     5. Enviar un producto válido con nombre ya existente crea un segundo registro independiente, no reemplaza el primero.
 
-- [ ] **T-09 — Implementar edición de productos en la API**
+- [x] **T-09 — Implementar edición de productos en la API**
   - **Agente:** Backend.
   - **Qué hace:** implementar `PUT /api/products/:id` para actualizar únicamente nombre, descripción, categoría y precio. La solicitud inválida no puede dejar datos parcialmente modificados.
   - **Archivos previstos:** controller/ruta de productos y pruebas HTTP de actualización.
