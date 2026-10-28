@@ -122,7 +122,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     4. `GET /api/products/999999` responde `404` y no altera los productos existentes.
     5. Una falla simulada de lectura produce una respuesta de error controlada; no devuelve una lista ficticia como si fuese real ni una traza interna.
 
-- [ ] **T-08 — Implementar alta de productos en la API**
+- [x] **T-08 — Implementar alta de productos en la API**
   - **Agente:** Backend.
   - **Qué hace:** implementar `POST /api/products`, recibir el producto, delegar la validación al servicio y devolver el registro creado con identificador y marcas de tiempo del sistema.
   - **Archivos previstos:** controller/ruta de productos y pruebas HTTP de creación.
