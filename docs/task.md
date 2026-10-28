@@ -49,7 +49,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     4. Eliminar el primer producto deja al segundo disponible; intentar obtener el identificador eliminado devuelve “no encontrado” y no elimina otros registros.
     5. La prueba de integración del repositorio confirma que los datos creados siguen presentes al reabrir la base de datos.
 
-- [ ] **T-03 — Implementar validación y normalización de productos**
+- [x] **T-03 — Implementar validación y normalización de productos**
   - **Agente:** Backend.
   - **Qué hace:** centralizar en el servicio las reglas de creación y edición: campos obligatorios, recorte de espacios, límites de longitud, precio en ARS y stock inicial. La edición solo cambia nombre, descripción, categoría y precio; no el stock.
   - **Archivos previstos:** `backend/src/services/products.service.js` y pruebas del servicio.
