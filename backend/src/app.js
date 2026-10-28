@@ -2,6 +2,7 @@ const express = require("express");
 const productsRepository = require("./repositories/products.repository");
 const {
   createProduct: createProductService,
+  deleteProduct: deleteProductService,
   getProduct,
   listProducts,
   updateProduct: updateProductService,
@@ -23,6 +24,9 @@ function createProductsService(database) {
     update(id, fields) {
       return productsRepository.update(database, id, fields);
     },
+    deleteById(id) {
+      return productsRepository.deleteById(database, id);
+    },
   };
 
   return {
@@ -37,6 +41,9 @@ function createProductsService(database) {
     },
     updateProduct(id, input) {
       return updateProductService(repository, Number(id), input);
+    },
+    deleteProduct(id) {
+      return deleteProductService(repository, Number(id));
     },
   };
 }

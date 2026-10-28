@@ -104,6 +104,10 @@ function updateProduct(repository, id, input) {
   return repository.update(id, product);
 }
 
+function deleteProduct(repository, id) {
+  return repository.deleteById(id);
+}
+
 function getProduct(repository, id) {
   return repository.findById(id);
 }
@@ -139,6 +143,7 @@ function listProducts(repository, filters = {}) {
 module.exports = {
   createProduct,
   updateProduct,
+  deleteProduct,
   getProduct,
   listProducts,
   ValidationError,

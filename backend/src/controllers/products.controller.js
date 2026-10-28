@@ -76,7 +76,32 @@ function createProductsController(productsService) {
     }
   }
 
-  return { createProduct, listProducts, getProduct, updateProduct };
+  function deleteProduct(request, response, next) {
+    try {
+      const deleted = productsService.deleteProduct(request.params.id);
+      if (!deleted) {
+        response.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "No se encontró el producto solicitado.",
+          },
+        });
+        return;
+      }
+
+      response.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  return {
+    createProduct,
+    listProducts,
+    getProduct,
+    updateProduct,
+    deleteProduct,
+  };
 }
 
 module.exports = { createProductsController };
