@@ -65,11 +65,11 @@ Al terminar:
 
 ## 5. Cómo se trabaja una tarea (ciclo obligatorio)
 
-Se trabaja **una sola tarea por vez**, siguiendo el orden de dependencias de `docs/tasks.md`. No se empieza la siguiente hasta cerrar por completo la actual.
+Se trabaja **una sola tarea por vez**, siguiendo el orden de dependencias de `docs/task.md`. No se empieza la siguiente hasta cerrar por completo la actual.
 
 ### Paso 1 — QA escribe y ejecuta las pruebas
 
-- El agente de QA lee la tarea correspondiente en `docs/tasks.md`, los criterios de aceptación de `docs/spec.md`, las reglas de negocio (RN), las historias de usuario (HU) y los casos de borde relacionados.
+- El agente de QA lee la tarea correspondiente en `docs/task.md`, los criterios de aceptación de `docs/spec.md`, las reglas de negocio (RN), las historias de usuario (HU) y los casos de borde relacionados.
 - Antes de implementar la funcionalidad, escribe las pruebas que cubren esos criterios y casos de borde.
 - Ejecuta las pruebas y confirma que fallan por la funcionalidad todavía ausente. Este fallo esperado es la referencia inicial del ciclo; no alcanza con escribir pruebas sin ejecutarlas.
 - Registra el comando utilizado y el resultado observado. Si las pruebas no arrancan por un problema de configuración o infraestructura, resuelve o informa ese bloqueo: no lo presenta como un fallo funcional esperado.
@@ -96,13 +96,13 @@ Se trabaja **una sola tarea por vez**, siguiendo el orden de dependencias de `do
 
 ### Paso 5 — Cerrar la tarea en el backlog
 
-- Después del commit aprobado, actualizar `docs/tasks.md` y cambiar la tarea de `[ ]` a `[x]`.
+- Después del commit aprobado, actualizar `docs/task.md` y cambiar la tarea de `[ ]` a `[x]`.
 - No marcar una tarea como hecha antes de que las pruebas pasen, la revisión esté aprobada y exista el commit correspondiente.
 - Si corresponde, registrar en la tarea el comando de prueba y el resultado observado. No declarar comprobaciones que no se ejecutaron.
 - Como la marca `[x]` se actualiza después del commit funcional, registrar enseguida ese cambio documental en un commit de cierre asociado a la misma tarea (por ejemplo, `T-01: marcar tarea completada`). No empezar otra tarea con ese cambio sin versionar ni incorporarlo incidentalmente al siguiente trabajo.
 - Solo después de actualizar y versionar el estado se considera cerrada la tarea y se puede iniciar la siguiente tarea cuyas dependencias estén satisfechas.
 
-**Condición de cierre:** pruebas ejecutadas y aprobadas + veredicto **APROBADO** + commit funcional con el identificador de tarea + estado `[x]` en `docs/tasks.md` versionado en Git. Si falta cualquiera de estos elementos, la tarea no está cerrada.
+**Condición de cierre:** pruebas ejecutadas y aprobadas + veredicto **APROBADO** + commit funcional con el identificador de tarea + estado `[x]` en `docs/task.md` versionado en Git. Si falta cualquiera de estos elementos, la tarea no está cerrada.
 
 ## 6. Coordinación entre roles
 
@@ -120,4 +120,4 @@ Si un agente detecta que necesita cambiar el contrato de la API o una regla de n
 
 - [cambio] 2026-10-22 — Se establecen instrucciones generales, fuentes de verdad y responsabilidades de los agentes.
 - [cambio] 2026-10-28 — Se incluye `docs/plan.md` como documento técnico subordinado al contrato funcional y se formaliza el orden previo a implementar.
-- [cambio] 2026-10-28 — Se formaliza el ciclo obligatorio por tarea: pruebas primero, implementación, revisión, commit y cierre en `docs/tasks.md`.
+- [cambio] 2026-10-28 — Se formaliza el ciclo obligatorio por tarea: pruebas primero, implementación, revisión, commit y cierre en `docs/task.md`.

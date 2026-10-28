@@ -65,7 +65,8 @@ stock-simple/
 │   ├── js/
 │   ├── index.html
 │   └── test/
-└── data/
+└── backend/
+    └── data/
 ```
 
 ## Requisitos
@@ -112,6 +113,14 @@ http://localhost:3000
 ```bash
 cd backend
 npm test
+```
+
+## Probar frontend y suite completa
+
+```bash
+cd backend
+npm run test:frontend
+npm run test:all
 ```
 
 ## Verificar la suma de stock y el resumen

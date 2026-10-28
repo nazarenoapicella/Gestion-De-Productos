@@ -10,7 +10,9 @@
   "scripts": {
     "db:init": "node src/db",
     "start": "node src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:frontend": "node --test ../frontend/test/t13.test.js ../frontend/test/t14.test.js ../frontend/test/t15.test.js ../frontend/test/t16.test.js ../frontend/test/t17.test.js ../frontend/test/t18.test.js ../frontend/test/t19.test.js",
+    "test:all": "npm test && npm run test:frontend"
   },
   "dependencies": {
     "express": "^5.3.0"
