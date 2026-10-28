@@ -170,7 +170,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     4. Cantidad `0`, `-1` o `1.5`, u operación `"reset"`, responde `400` y no altera el stock.
     5. Un ID inexistente responde `404`.
 
-- [ ] **T-12 — Exponer el resumen del inventario en la API**
+- [x] **T-12 — Exponer el resumen del inventario en la API**
   - **Agente:** Backend.
   - **Qué hace:** implementar `GET /api/summary`, devolviendo los tres indicadores calculados por el servicio. No duplicar la lógica de conteo en el controller.
   - **Archivos previstos:** ruta/controller del resumen y pruebas HTTP.
