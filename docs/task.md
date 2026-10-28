@@ -24,7 +24,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 
 **Objetivo:** construir y probar la base del dominio sin depender todavía de la interfaz web.
 
-- [ ] **T-01 — Inicializar el backend y el esquema SQLite**
+- [x] **T-01 — Inicializar el backend y el esquema SQLite**
   - **Agente:** Base de datos, con apoyo de Backend.
   - **Qué hace:** preparar la configuración mínima de Node.js para ejecutar el backend y las pruebas, abrir SQLite desde una ruta persistente e inicializar la tabla `products` con los tipos, campos obligatorios y restricciones del plan técnico. No desarrollar aún la interfaz.
   - **Archivos previstos:** `backend/package.json`, `backend/src/db/`, pruebas de esquema en `backend/test/` y, si hace falta, `.gitignore`.
