@@ -263,7 +263,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     4. Si el servidor falla, la interfaz informa el error y no simula el cambio.
     5. La operación queda cubierto por pruebas frontend y backend ejecutadas y aprobadas: `frontend/test/t18.test.js` y la suite de backend completa.
 
-- [ ] **T-19 — Mostrar y actualizar el resumen del inventario**
+- [x] **T-19 — Mostrar y actualizar el resumen del inventario**
   - **Agente:** Frontend.
   - **Qué hace:** mostrar productos registrados, unidades totales y productos con stock bajo a partir de `GET /api/summary`. Actualizar los indicadores después de altas, ediciones, eliminaciones y ajustes exitosos.
   - **Archivos previstos:** `frontend/js/api.js`, `frontend/js/app.js`, markup y estilos de indicadores.
@@ -274,6 +274,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     2. Con tres productos que tienen stocks `0`, `5` y `6`, se muestran `3`, `11` y `2`, respectivamente.
     3. Al aumentar el producto con stock `5` en `2`, los indicadores pasan a `3`, `13` y `1`.
     4. Al eliminar el producto con stock `0`, los indicadores pasan a `2`, `11` y `1`.
+  - **Verificación:** `node --test frontend/test/t19.test.js` (2/2), `node --test frontend/test/t13.test.js frontend/test/t14.test.js frontend/test/t15.test.js frontend/test/t16.test.js frontend/test/t17.test.js frontend/test/t18.test.js frontend/test/t19.test.js` (46/46), `npm --prefix backend test` (108/108) y `git --no-pager diff --check`.
 
 ---
 
