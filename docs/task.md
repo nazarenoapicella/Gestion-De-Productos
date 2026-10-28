@@ -147,7 +147,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     3. Una actualización con categoría formada por espacios responde `400`; nombre, categoría, precio y stock permanecen en sus valores anteriores.
     4. Actualizar `/api/products/999999` responde `404` y no modifica ningún otro registro.
 
-- [ ] **T-10 — Implementar eliminación de productos en la API**
+- [x] **T-10 — Implementar eliminación de productos en la API**
   - **Agente:** Backend.
   - **Qué hace:** implementar `DELETE /api/products/:id`. La confirmación de usuario pertenece al frontend; el backend debe eliminar solo el identificador solicitado e informar cuando no exista.
   - **Archivos previstos:** controller/ruta de productos y pruebas HTTP de eliminación.
