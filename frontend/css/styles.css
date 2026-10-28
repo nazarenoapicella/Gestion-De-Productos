@@ -80,6 +80,15 @@ h1 {
   background: #fff;
 }
 
+.button--danger {
+  color: #fff;
+  background: #8a1c24;
+}
+
+.button--danger:hover {
+  background: #6f161d;
+}
+
 .button--table {
   min-height: 2.25rem;
   margin: 0;

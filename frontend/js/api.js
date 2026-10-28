@@ -1,9 +1,16 @@
 const genericErrorMessage = "No se pudieron cargar los productos. Inténtalo nuevamente.";
 const createErrorMessage = "No se pudo registrar el producto. Inténtalo nuevamente.";
 const updateErrorMessage = "No se pudo actualizar el producto. Inténtalo nuevamente.";
+const deleteErrorMessage = "No se pudo eliminar el producto. Inténtalo nuevamente.";
 const notFoundErrorMessage = "El producto ya no existe o no fue encontrado.";
 
-async function requestJson(url, options, fallbackMessage, notFoundMessage = fallbackMessage) {
+async function requestJson(
+  url,
+  options,
+  fallbackMessage,
+  notFoundMessage = fallbackMessage,
+  expectedSuccessStatus,
+) {
   let response;
   try {
     response = await fetch(url, options);
@@ -12,10 +19,14 @@ async function requestJson(url, options, fallbackMessage, notFoundMessage = fall
   }
 
   let body;
-  try {
-    body = await response.json();
-  } catch {
-    throw new Error(fallbackMessage);
+  if (response.status === 204) {
+    body = null;
+  } else {
+    try {
+      body = await response.json();
+    } catch {
+      throw new Error(fallbackMessage);
+    }
   }
 
   if (!response.ok) {
@@ -27,6 +38,10 @@ async function requestJson(url, options, fallbackMessage, notFoundMessage = fall
         typeof apiError.message === "string" && apiError.message.trim()) {
       throw new Error(apiError.message);
     }
+    throw new Error(fallbackMessage);
+  }
+
+  if (expectedSuccessStatus !== undefined && response.status !== expectedSuccessStatus) {
     throw new Error(fallbackMessage);
   }
 
@@ -87,4 +102,17 @@ export async function updateProduct(id, product) {
   }
 
   return body;
+}
+
+export async function deleteProduct(id) {
+  await requestJson(
+    `/api/products/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+    },
+    deleteErrorMessage,
+    notFoundErrorMessage,
+    204,
+  );
 }

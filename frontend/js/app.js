@@ -1,14 +1,15 @@
-import { getProducts, createProduct, updateProduct } from "./api.js";
+import { getProducts, createProduct, updateProduct, deleteProduct } from "./api.js";
 
 const genericErrorMessage = "No se pudieron cargar los productos. Inténtalo nuevamente.";
 const genericCreateErrorMessage = "No se pudo registrar el producto. Inténtalo nuevamente.";
 const genericUpdateErrorMessage = "No se pudo actualizar el producto. Inténtalo nuevamente.";
+const genericDeleteErrorMessage = "No se pudo eliminar el producto. Inténtalo nuevamente.";
 
 function setVisible(element, visible) {
   element.hidden = !visible;
 }
 
-function renderProducts(products, tableBody, onEdit) {
+function renderProducts(products, tableBody, onEdit, onDelete) {
   tableBody.replaceChildren();
 
   for (const product of products) {
@@ -19,6 +20,7 @@ function renderProducts(products, tableBody, onEdit) {
     const stockCell = document.createElement("td");
     const actionsCell = document.createElement("td");
     const editButton = document.createElement("button");
+    const deleteButton = document.createElement("button");
 
     nameCell.textContent = product.name;
     categoryCell.textContent = product.category;
@@ -32,23 +34,33 @@ function renderProducts(products, tableBody, onEdit) {
     editButton.addEventListener("click", () => onEdit(product, editButton));
     actionsCell.appendChild(editButton);
 
+    deleteButton.type = "button";
+    deleteButton.className = "button button--danger button--table";
+    deleteButton.textContent = "Eliminar";
+    deleteButton.setAttribute("aria-label", `Eliminar ${product.name}`);
+    deleteButton.addEventListener("click", () => onDelete(product, deleteButton));
+    actionsCell.appendChild(deleteButton);
+
     row.append(nameCell, categoryCell, priceCell, stockCell, actionsCell);
     tableBody.appendChild(row);
   }
 }
 
-async function loadInventory(onEdit) {
+async function loadInventory(onEdit, onDelete) {
   const loadingState = document.getElementById("loading-state");
   const emptyState = document.getElementById("empty-state");
   const errorState = document.getElementById("error-state");
+  const deleteErrorState = document.getElementById("delete-error-state");
   const table = document.getElementById("inventory-table");
   const tableBody = document.getElementById("products-list");
 
   setVisible(loadingState, true);
   setVisible(emptyState, false);
   setVisible(errorState, false);
+  setVisible(deleteErrorState, false);
   setVisible(table, false);
   errorState.textContent = "";
+  deleteErrorState.textContent = "";
   tableBody.replaceChildren();
 
   try {
@@ -60,7 +72,7 @@ async function loadInventory(onEdit) {
       return true;
     }
 
-    renderProducts(products, tableBody, onEdit);
+    renderProducts(products, tableBody, onEdit, onDelete);
     setVisible(table, true);
     return true;
   } catch (error) {
@@ -103,6 +115,40 @@ function initializeInventoryPage() {
   const submitEditButton = document.getElementById("submit-edit-product");
   let editTrigger = null;
   let editingProductId = null;
+
+  async function removeProduct(product, button) {
+    const confirmed = window.confirm(
+      `¿Deseas eliminar el producto "${product.name}"? Esta acción no se puede deshacer.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    const deleteErrorState = document.getElementById("delete-error-state");
+    setVisible(deleteErrorState, false);
+    setVisible(successState, false);
+    button.disabled = true;
+    const originalButtonLabel = button.textContent;
+    button.textContent = "Eliminando…";
+
+    try {
+      await deleteProduct(product.id);
+      const refreshed = await loadInventory(showEditForm, removeProduct);
+      successState.textContent = refreshed
+        ? `Se eliminó el producto ${product.name}.`
+        : `Se eliminó el producto ${product.name}, pero no se pudo actualizar el listado.`;
+      setVisible(successState, true);
+      openButton.focus();
+    } catch (error) {
+      deleteErrorState.textContent = error instanceof Error && error.message
+        ? error.message
+        : genericDeleteErrorMessage;
+      setVisible(deleteErrorState, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = originalButtonLabel;
+    }
+  }
 
   function showEditForm(product, trigger) {
     editTrigger = trigger;
@@ -159,7 +205,7 @@ function initializeInventoryPage() {
       resetForm(createForm);
       setVisible(createPanel, false);
 
-      const refreshed = await loadInventory(showEditForm);
+      const refreshed = await loadInventory(showEditForm, removeProduct);
       successState.textContent = refreshed
         ? `Se registró el producto ${createdProduct.name}.`
         : `Se registró el producto ${createdProduct.name}, pero no se pudo actualizar el listado.`;
@@ -207,7 +253,7 @@ function initializeInventoryPage() {
       resetForm(editForm, setEditFormError);
       setVisible(editPanel, false);
 
-      const refreshed = await loadInventory(showEditForm);
+      const refreshed = await loadInventory(showEditForm, removeProduct);
       successState.textContent = refreshed
         ? `Se actualizó el producto ${updatedProduct.name}.`
         : `Se actualizó el producto ${updatedProduct.name}, pero no se pudo actualizar el listado.`;
@@ -223,7 +269,7 @@ function initializeInventoryPage() {
     }
   });
 
-  loadInventory(showEditForm);
+  loadInventory(showEditForm, removeProduct);
 }
 
 document.addEventListener("DOMContentLoaded", initializeInventoryPage);
