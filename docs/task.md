@@ -109,7 +109,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 
 **Objetivo:** exponer las operaciones probadas por medio de HTTP/JSON y verificar las reglas también cuando se llama directamente a la API, sin pasar por el navegador.
 
-- [ ] **T-07 — Implementar consulta y listado de productos en la API**
+- [x] **T-07 — Implementar consulta y listado de productos en la API**
   - **Agente:** Backend.
   - **Qué hace:** configurar la aplicación Express, las rutas y los controllers de lectura para `GET /api/products` y `GET /api/products/:id`. Conservar los filtros `search` y `category` y acordar/documentar un formato de error consistente con la propuesta de `plan.md` antes de conectar el frontend.
   - **Archivos previstos:** `backend/src/app.js`, rutas y controller de productos, pruebas HTTP y, si corresponde, `docs/decisiones.md` para fijar el contrato técnico del error.
