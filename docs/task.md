@@ -236,7 +236,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     3. Si la API devuelve error, el producto no se elimina visualmente como si la operación hubiera tenido éxito y se informa el problema. La actualización del resumen se comprueba en T-19.
   - **Verificación:** `node --test frontend/test/t16.test.js` (5/5), `node --test frontend/test/t13.test.js` (10/10), `node --test frontend/test/t14.test.js` (7/7), `node --test frontend/test/t15.test.js` (8/8), `npm --prefix backend test` (108/108), `node --check frontend/js/api.js`, `node --check frontend/js/app.js`, `node --check frontend/test/t16.test.js` y `git diff --check`.
 
-- [ ] **T-17 — Conectar búsqueda y filtro por categoría**
+- [x] **T-17 — Conectar búsqueda y filtro por categoría**
   - **Agente:** Frontend.
   - **Qué hace:** añadir búsqueda por nombre, filtro de categoría, combinación de ambas condiciones y acción para limpiar los filtros. Mostrar el estado sin resultados.
   - **Archivos previstos:** `frontend/index.html`, `frontend/js/api.js` o `frontend/js/app.js`, estilos de controles.
@@ -248,6 +248,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     3. Combinar búsqueda `mouse` y categoría `Accesorios` muestra solo `Mousepad`.
     4. Buscar `router` muestra un estado sin resultados.
     5. Limpiar los filtros vuelve a mostrar los tres registros.
+  - **Verificación:** `node --test frontend/test/t17.test.js` (12/12), `node --test frontend/test/t13.test.js frontend/test/t14.test.js frontend/test/t15.test.js frontend/test/t16.test.js` (30/30), `npm --prefix backend test` (108/108), `node --check frontend/js/api.js`, `node --check frontend/js/app.js`, `node --check frontend/test/t17.test.js` y `git diff --check`.
 
 - [ ] **T-18 — Incorporar el ajuste de stock en la interfaz**
   - **Agente:** Frontend.
