@@ -157,7 +157,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     1. Con productos de ID `1` y `2`, `DELETE /api/products/1` responde `204`; consultar el ID `1` responde `404` y el ID `2` continúa disponible.
     2. `DELETE /api/products/999999` responde `404` y el producto de ID `2` sigue sin cambios.
 
-- [ ] **T-11 — Implementar ajuste de stock en la API**
+- [x] **T-11 — Implementar ajuste de stock en la API**
   - **Agente:** Backend.
   - **Qué hace:** implementar `PATCH /api/products/:id/stock`, usando `operation = increase|decrease` y `quantity` entero positivo. Traducir los rechazos a errores HTTP controlados.
   - **Archivos previstos:** controller/ruta de stock y pruebas HTTP de ajustes.
