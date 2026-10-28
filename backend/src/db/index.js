@@ -36,6 +36,7 @@ function openDatabase(databasePath = process.env.DATABASE_PATH || defaultDatabas
 
   const database = new DatabaseSync(resolvedPath);
   try {
+    database.exec("PRAGMA busy_timeout = 5000");
     database.exec(schema);
     return database;
   } catch (error) {

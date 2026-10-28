@@ -77,6 +77,48 @@ function update(database, id, fields) {
   return findById(database, id);
 }
 
+function adjustStock(database, id, operation, quantity) {
+  const statement =
+    operation === "increase"
+      ? database.prepare(
+          `UPDATE products
+           SET stock = stock + ?, updated_at = ?
+           WHERE id = ? AND stock <= ?
+           RETURNING ${productColumns}`,
+        )
+      : database.prepare(
+          `UPDATE products
+           SET stock = stock - ?, updated_at = ?
+           WHERE id = ? AND stock >= ?
+           RETURNING ${productColumns}`,
+        );
+  const values =
+    operation === "increase"
+      ? [
+          quantity,
+          new Date().toISOString(),
+          id,
+          Number.MAX_SAFE_INTEGER - quantity,
+        ]
+      : [quantity, new Date().toISOString(), id, quantity];
+  const product = statement.get(...values);
+
+  if (product) {
+    return { status: "updated", product: toProduct(product) };
+  }
+
+  const exists = database
+    .prepare("SELECT 1 AS found FROM products WHERE id = ?")
+    .get(id);
+
+  if (!exists) {
+    return { status: "not_found" };
+  }
+  return operation === "increase"
+    ? { status: "out_of_range" }
+    : { status: "insufficient_stock" };
+}
+
 function deleteById(database, id) {
   const result = database
     .prepare("DELETE FROM products WHERE id = ?")
@@ -85,4 +127,11 @@ function deleteById(database, id) {
   return result.changes > 0;
 }
 
-module.exports = { create, findById, findAll, update, deleteById };
+module.exports = {
+  create,
+  findById,
+  findAll,
+  update,
+  adjustStock,
+  deleteById,
+};
