@@ -212,7 +212,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     3. Un error `400` devuelto por la API se muestra al usuario y el formulario conserva información suficiente para corregir los campos.
   - **Verificación:** `node --test frontend/test/t14.test.js` (7/7), `node --test frontend/test/t13.test.js` (10/10) y `npm --prefix backend test` (108/108). Recorrido de navegador con API y SQLite temporales: alta, normalización, DTO, listado y restricciones nativas de nombre, precio y stock verificados.
 
-- [ ] **T-15 — Crear la edición de productos**
+- [x] **T-15 — Crear la edición de productos**
   - **Agente:** Frontend.
   - **Qué hace:** permitir seleccionar un producto, cargar los valores actuales y guardar cambios descriptivos/comerciales. No ofrecer un campo de stock en el formulario de edición.
   - **Archivos previstos:** `frontend/js/app.js`, estructura del formulario y estilos relacionados.
@@ -222,6 +222,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     1. Editar `Mouse` a `Mouse Pro` y cambiar el precio de `1000` a `1500` muestra los nuevos datos y conserva stock `5`.
     2. La interfaz de edición no permite cambiar el stock.
     3. Si la API responde `404`, se informa que el producto ya no existe; si responde error de validación, no se muestran falsamente los cambios como guardados.
+  - **Verificación:** `node --test frontend/test/t15.test.js` (8/8), `node --test frontend/test/t13.test.js` (10/10), `node --test frontend/test/t14.test.js` (7/7), `npm --prefix backend test` (108/108), `node --check frontend/js/api.js`, `node --check frontend/js/app.js` y `git diff --check`.
 
 - [ ] **T-16 — Incorporar eliminación con confirmación**
   - **Agente:** Frontend.
