@@ -46,9 +46,41 @@ function renderProducts(products, tableBody, onEdit, onDelete) {
   }
 }
 
-async function loadInventory(onEdit, onDelete) {
+function currentFilters() {
+  return {
+    search: document.getElementById("search-products").value.trim(),
+    category: document.getElementById("category-filter").value,
+  };
+}
+
+function updateCategoryOptions(products) {
+  const categoryFilter = document.getElementById("category-filter");
+  const selectedCategory = categoryFilter.value;
+  const categories = [...new Set(products.map((product) => product.category))];
+
+  categoryFilter.replaceChildren();
+  const allCategories = document.createElement("option");
+  allCategories.value = "";
+  allCategories.textContent = "Todas las categorías";
+  categoryFilter.appendChild(allCategories);
+
+  for (const category of categories) {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    categoryFilter.appendChild(option);
+  }
+
+  categoryFilter.value = categories.includes(selectedCategory) ? selectedCategory : "";
+}
+
+let latestInventoryRequest = 0;
+
+async function loadInventory(onEdit, onDelete, filters = {}, updateCategories = false) {
+  const requestId = ++latestInventoryRequest;
   const loadingState = document.getElementById("loading-state");
   const emptyState = document.getElementById("empty-state");
+  const noResultsState = document.getElementById("no-results-state");
   const errorState = document.getElementById("error-state");
   const deleteErrorState = document.getElementById("delete-error-state");
   const table = document.getElementById("inventory-table");
@@ -56,6 +88,7 @@ async function loadInventory(onEdit, onDelete) {
 
   setVisible(loadingState, true);
   setVisible(emptyState, false);
+  setVisible(noResultsState, false);
   setVisible(errorState, false);
   setVisible(deleteErrorState, false);
   setVisible(table, false);
@@ -64,11 +97,30 @@ async function loadInventory(onEdit, onDelete) {
   tableBody.replaceChildren();
 
   try {
-    const products = await getProducts();
+    let activeFilters = filters;
+    let products;
+    if (updateCategories) {
+      const allProducts = await getProducts();
+      if (requestId !== latestInventoryRequest) {
+        return true;
+      }
+      updateCategoryOptions(allProducts);
+      activeFilters = currentFilters();
+      if (!activeFilters.search && !activeFilters.category) {
+        products = allProducts;
+      }
+    }
+
+    if (!products) {
+      products = await getProducts(activeFilters);
+    }
+    if (requestId !== latestInventoryRequest) {
+      return true;
+    }
     setVisible(loadingState, false);
 
     if (products.length === 0) {
-      setVisible(emptyState, true);
+      setVisible(activeFilters.search || activeFilters.category ? noResultsState : emptyState, true);
       return true;
     }
 
@@ -76,6 +128,9 @@ async function loadInventory(onEdit, onDelete) {
     setVisible(table, true);
     return true;
   } catch (error) {
+    if (requestId !== latestInventoryRequest) {
+      return true;
+    }
     setVisible(loadingState, false);
     errorState.textContent = error instanceof Error && error.message
       ? error.message
@@ -109,12 +164,37 @@ function initializeInventoryPage() {
   const cancelButton = document.getElementById("cancel-create-product");
   const submitButton = document.getElementById("submit-create-product");
   const successState = document.getElementById("success-state");
+  const filterForm = document.getElementById("filter-form");
+  const searchInput = document.getElementById("search-products");
+  const categoryFilter = document.getElementById("category-filter");
+  const clearFiltersButton = document.getElementById("clear-filters");
   const editPanel = document.getElementById("edit-product-panel");
   const editForm = document.getElementById("edit-product-form");
   const cancelEditButton = document.getElementById("cancel-edit-product");
   const submitEditButton = document.getElementById("submit-edit-product");
   let editTrigger = null;
   let editingProductId = null;
+  let lastFilterKey = null;
+  let pendingFilterKey = null;
+
+  function applyFilters() {
+    const filters = currentFilters();
+    const filterKey = `${filters.search}\u0000${filters.category}`;
+    if (filterKey === lastFilterKey || filterKey === pendingFilterKey) {
+      return;
+    }
+    pendingFilterKey = filterKey;
+    lastFilterKey = null;
+    loadInventory(showEditForm, removeProduct, filters).then((refreshed) => {
+      if (pendingFilterKey !== filterKey) {
+        return;
+      }
+      pendingFilterKey = null;
+      if (refreshed) {
+        lastFilterKey = filterKey;
+      }
+    });
+  }
 
   async function removeProduct(product, button) {
     const confirmed = window.confirm(
@@ -133,7 +213,7 @@ function initializeInventoryPage() {
 
     try {
       await deleteProduct(product.id);
-      const refreshed = await loadInventory(showEditForm, removeProduct);
+      const refreshed = await loadInventory(showEditForm, removeProduct, currentFilters(), true);
       successState.textContent = refreshed
         ? `Se eliminó el producto ${product.name}.`
         : `Se eliminó el producto ${product.name}, pero no se pudo actualizar el listado.`;
@@ -205,7 +285,7 @@ function initializeInventoryPage() {
       resetForm(createForm);
       setVisible(createPanel, false);
 
-      const refreshed = await loadInventory(showEditForm, removeProduct);
+      const refreshed = await loadInventory(showEditForm, removeProduct, currentFilters(), true);
       successState.textContent = refreshed
         ? `Se registró el producto ${createdProduct.name}.`
         : `Se registró el producto ${createdProduct.name}, pero no se pudo actualizar el listado.`;
@@ -253,7 +333,7 @@ function initializeInventoryPage() {
       resetForm(editForm, setEditFormError);
       setVisible(editPanel, false);
 
-      const refreshed = await loadInventory(showEditForm, removeProduct);
+      const refreshed = await loadInventory(showEditForm, removeProduct, currentFilters(), true);
       successState.textContent = refreshed
         ? `Se actualizó el producto ${updatedProduct.name}.`
         : `Se actualizó el producto ${updatedProduct.name}, pero no se pudo actualizar el listado.`;
@@ -269,7 +349,31 @@ function initializeInventoryPage() {
     }
   });
 
-  loadInventory(showEditForm, removeProduct);
+  filterForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    applyFilters();
+  });
+
+  categoryFilter.addEventListener("change", applyFilters);
+
+  clearFiltersButton.addEventListener("click", () => {
+    searchInput.value = "";
+    categoryFilter.value = "";
+    applyFilters();
+  });
+
+  const initialFilters = currentFilters();
+  const initialFilterKey = `${initialFilters.search}\u0000${initialFilters.category}`;
+  pendingFilterKey = initialFilterKey;
+  loadInventory(showEditForm, removeProduct, initialFilters, true).then((refreshed) => {
+    if (pendingFilterKey !== initialFilterKey) {
+      return;
+    }
+    pendingFilterKey = null;
+    if (refreshed) {
+      lastFilterKey = initialFilterKey;
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", initializeInventoryPage);

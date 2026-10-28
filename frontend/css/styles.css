@@ -7,8 +7,31 @@
   text-rendering: optimizeLegibility;
 }
 
+.inventory-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e3e9ee;
+}
+
+.inventory-filters .form-field {
+  flex: 1 1 14rem;
+}
+
+.filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 * {
   box-sizing: border-box;
+}
+
+.page-header .button--primary {
+  margin-top: 1.25rem;
 }
 
 body {
@@ -65,7 +88,7 @@ h1 {
 }
 
 .button--primary {
-  margin-top: 1.25rem;
+  margin-top: 0;
   color: #fff;
   background: #245c78;
 }
@@ -103,7 +126,8 @@ h1 {
 
 .button:focus-visible,
 input:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+select:focus-visible {
   outline: 3px solid #d27a00;
   outline-offset: 3px;
 }
@@ -143,7 +167,8 @@ textarea:focus-visible {
 }
 
 .form-field input,
-.form-field textarea {
+.form-field textarea,
+.form-field select {
   width: 100%;
   min-height: 2.75rem;
   padding: 0.6rem 0.7rem;

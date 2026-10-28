@@ -64,12 +64,35 @@
       <section class="inventory" aria-labelledby="inventory-title">
         <h2 id="inventory-title">Productos</h2>
 
+        <form id="filter-form" class="inventory-filters">
+          <div class="form-field">
+            <label for="search-products">Buscar por nombre</label>
+            <input id="search-products" name="search" type="search" autocomplete="off">
+          </div>
+          <div class="form-field">
+            <label for="category-filter">Categoría</label>
+            <select id="category-filter" name="category">
+              <option value="">Todas las categorías</option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            <button class="button button--primary" type="submit">Buscar</button>
+            <button id="clear-filters" class="button button--secondary" type="button">
+              Limpiar filtros
+            </button>
+          </div>
+        </form>
+
         <p id="loading-state" class="state-message" role="status" aria-live="polite">
           Cargando productos…
         </p>
 
         <p id="empty-state" class="state-message" role="status" aria-live="polite" hidden>
           No hay productos registrados.
+        </p>
+
+        <p id="no-results-state" class="state-message" role="status" aria-live="polite" hidden>
+          No se encontraron productos.
         </p>
 
         <p id="error-state" class="state-message state-message--error" role="alert" hidden></p>

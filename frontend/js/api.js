@@ -48,9 +48,17 @@ async function requestJson(
   return body;
 }
 
-export async function getProducts() {
+export async function getProducts(filters = {}) {
+  const parameters = [];
+  for (const field of ["search", "category"]) {
+    const value = typeof filters[field] === "string" ? filters[field].trim() : "";
+    if (value) {
+      parameters.push(`${field}=${encodeURIComponent(value)}`);
+    }
+  }
+  const url = `/api/products${parameters.length ? `?${parameters.join("&")}` : ""}`;
   const body = await requestJson(
-    "/api/products",
+    url,
     { method: "GET", headers: { Accept: "application/json" } },
     genericErrorMessage,
   );
