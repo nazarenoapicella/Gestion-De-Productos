@@ -200,7 +200,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     4. Se puede recorrer la pantalla y operar sus controles existentes mediante teclado, con foco visible y nombres accesibles.
   - **Verificación:** `node --test frontend/test/t13.test.js` (10/10) y `npm --prefix backend test` (108/108).
 
-- [ ] **T-14 — Crear el formulario de alta de productos**
+- [x] **T-14 — Crear el formulario de alta de productos**
   - **Agente:** Frontend.
   - **Qué hace:** incorporar los campos nombre, categoría, precio, stock inicial y descripción opcional. Enviar la solicitud de creación a la API y mostrar el resultado real.
   - **Archivos previstos:** frontend, formulario y estilos existentes; mantener el cambio acotado a un máximo de unos pocos archivos.
@@ -210,6 +210,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     1. Cargar nombre `Mouse`, categoría `Periféricos`, precio `1250.50` y stock `5` crea el producto, cierra o limpia el formulario de manera coherente y muestra el registro en el listado.
     2. Intentar enviar nombre vacío, precio negativo o stock decimal muestra el error correspondiente y no presenta el alta como exitosa.
     3. Un error `400` devuelto por la API se muestra al usuario y el formulario conserva información suficiente para corregir los campos.
+  - **Verificación:** `node --test frontend/test/t14.test.js` (7/7), `node --test frontend/test/t13.test.js` (10/10) y `npm --prefix backend test` (108/108). Recorrido de navegador con API y SQLite temporales: alta, normalización, DTO, listado y restricciones nativas de nombre, precio y stock verificados.
 
 - [ ] **T-15 — Crear la edición de productos**
   - **Agente:** Frontend.
