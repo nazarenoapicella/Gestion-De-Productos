@@ -203,6 +203,48 @@ select:focus-visible {
   background: #f0f8f2;
 }
 
+.summary-panel {
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid #d5dfe6;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 0.5rem 1.5rem rgb(23 43 58 / 6%);
+}
+
+.summary-panel__header h2 {
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.summary-card {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid #d5dfe6;
+  border-radius: 0.75rem;
+  background: #f7f9fa;
+}
+
+.summary-label {
+  margin: 0;
+  color: #4a5d6b;
+  font-size: 0.92rem;
+}
+
+.summary-value {
+  margin: 0;
+  color: #172b3a;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 700;
+}
+
 .inventory {
   overflow: hidden;
   border: 1px solid #d5dfe6;

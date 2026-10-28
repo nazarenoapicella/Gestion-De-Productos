@@ -1,4 +1,5 @@
 const genericErrorMessage = "No se pudieron cargar los productos. Inténtalo nuevamente.";
+const summaryErrorMessage = "No se pudo cargar el resumen del inventario. Inténtalo nuevamente.";
 const createErrorMessage = "No se pudo registrar el producto. Inténtalo nuevamente.";
 const updateErrorMessage = "No se pudo actualizar el producto. Inténtalo nuevamente.";
 const deleteErrorMessage = "No se pudo eliminar el producto. Inténtalo nuevamente.";
@@ -64,6 +65,20 @@ export async function getProducts(filters = {}) {
   );
   if (!Array.isArray(body)) {
     throw new Error(genericErrorMessage);
+  }
+
+  return body;
+}
+
+export async function getSummary() {
+  const body = await requestJson(
+    "/api/summary",
+    { method: "GET", headers: { Accept: "application/json" } },
+    summaryErrorMessage,
+  );
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new Error(summaryErrorMessage);
   }
 
   return body;

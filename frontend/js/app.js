@@ -1,5 +1,6 @@
 import {
   getProducts,
+  getSummary,
   createProduct,
   updateProduct,
   adjustProductStock,
@@ -155,6 +156,38 @@ async function loadInventory(onEdit, onDelete, onAdjust, filters = {}, updateCat
   }
 }
 
+function setSummaryValues(summary) {
+  const summaryProducts = document.getElementById("summary-products");
+  const summaryUnits = document.getElementById("summary-units");
+  const summaryLowStock = document.getElementById("summary-low-stock");
+
+  if (summaryProducts) summaryProducts.textContent = String(summary?.productsCount ?? 0);
+  if (summaryUnits) summaryUnits.textContent = String(summary?.unitsInStock ?? 0);
+  if (summaryLowStock) summaryLowStock.textContent = String(summary?.lowStockCount ?? 0);
+}
+
+async function loadSummary() {
+  const summaryError = document.getElementById("summary-error");
+
+  try {
+    const summary = await getSummary();
+    setSummaryValues(summary);
+    if (summaryError) {
+      summaryError.textContent = "";
+      setVisible(summaryError, false);
+    }
+    return true;
+  } catch (error) {
+    if (summaryError) {
+      summaryError.textContent = error instanceof Error && error.message
+        ? error.message
+        : "No se pudo cargar el resumen del inventario. Inténtalo nuevamente.";
+      setVisible(summaryError, true);
+    }
+    return false;
+  }
+}
+
 function setFormError(message) {
   const formError = document.getElementById("form-error");
   formError.textContent = message;
@@ -241,6 +274,7 @@ function initializeInventoryPage() {
     try {
       await deleteProduct(product.id);
       const refreshed = await loadInventory(showEditForm, removeProduct, showAdjustStockForm, currentFilters(), true);
+      await loadSummary();
       successState.textContent = refreshed
         ? `Se eliminó el producto ${product.name}.`
         : `Se eliminó el producto ${product.name}, pero no se pudo actualizar el listado.`;
@@ -327,6 +361,7 @@ function initializeInventoryPage() {
       setVisible(createPanel, false);
 
       const refreshed = await loadInventory(showEditForm, removeProduct, showAdjustStockForm, currentFilters(), true);
+      await loadSummary();
       successState.textContent = refreshed
         ? `Se registró el producto ${createdProduct.name}.`
         : `Se registró el producto ${createdProduct.name}, pero no se pudo actualizar el listado.`;
@@ -376,6 +411,7 @@ function initializeInventoryPage() {
       adjustmentForm.reset();
       setVisible(adjustmentPanel, false);
       const refreshed = await loadInventory(showEditForm, removeProduct, showAdjustStockForm, currentFilters(), true);
+      await loadSummary();
       successState.textContent = refreshed
         ? `Se ajustó el stock de ${updatedProduct.name}.`
         : `Se ajustó el stock de ${updatedProduct.name}, pero no se pudo actualizar el listado.`;
@@ -418,6 +454,7 @@ function initializeInventoryPage() {
       setVisible(editPanel, false);
 
       const refreshed = await loadInventory(showEditForm, removeProduct, showAdjustStockForm, currentFilters(), true);
+      await loadSummary();
       successState.textContent = refreshed
         ? `Se actualizó el producto ${updatedProduct.name}.`
         : `Se actualizó el producto ${updatedProduct.name}, pero no se pudo actualizar el listado.`;
@@ -458,6 +495,7 @@ function initializeInventoryPage() {
       lastFilterKey = initialFilterKey;
     }
   });
+  loadSummary();
 }
 
 document.addEventListener("DOMContentLoaded", initializeInventoryPage);

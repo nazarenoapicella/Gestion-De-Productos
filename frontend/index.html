@@ -61,6 +61,27 @@
 
       <p id="success-state" class="state-message state-message--success" role="status" aria-live="polite" hidden></p>
 
+      <section id="summary-panel" class="summary-panel" aria-labelledby="summary-title">
+        <div class="summary-panel__header">
+          <h2 id="summary-title">Resumen del inventario</h2>
+        </div>
+        <p id="summary-error" class="state-message state-message--error" role="alert" hidden></p>
+        <div class="summary-grid">
+          <article class="summary-card">
+            <p class="summary-label">Productos registrados</p>
+            <p id="summary-products" class="summary-value" aria-live="polite">0</p>
+          </article>
+          <article class="summary-card">
+            <p class="summary-label">Unidades en stock</p>
+            <p id="summary-units" class="summary-value" aria-live="polite">0</p>
+          </article>
+          <article class="summary-card">
+            <p class="summary-label">Productos con stock bajo</p>
+            <p id="summary-low-stock" class="summary-value" aria-live="polite">0</p>
+          </article>
+        </div>
+      </section>
+
       <section class="inventory" aria-labelledby="inventory-title">
         <h2 id="inventory-title">Productos</h2>
 
