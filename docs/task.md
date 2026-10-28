@@ -78,7 +78,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     5. Una operación sobre un identificador inexistente devuelve el resultado “no encontrado” y no modifica ningún producto.
     6. Dos solicitudes concurrentes de disminución no pueden dejar stock negativo ni confirmar una disminución que exceda el stock disponible.
 
-- [ ] **T-05 — Implementar búsqueda, filtro y orden del listado**
+- [x] **T-05 — Implementar búsqueda, filtro y orden del listado**
   - **Agente:** Backend.
   - **Qué hace:** ofrecer la consulta de productos ordenada alfabéticamente por nombre, con búsqueda parcial sin distinguir mayúsculas y minúsculas y filtro por categoría completa. La búsqueda y el filtro deben combinarse.
   - **Archivos previstos:** `backend/src/repositories/products.repository.js`, `backend/src/services/products.service.js` y pruebas del listado.
