@@ -64,7 +64,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     6. Un producto con stock `5` recibe una edición que incluye `stock: 99`; los campos editables cambian, pero el stock continúa en `5`.
     7. Una edición inválida deja sin cambios todos los valores previos del producto.
 
-- [ ] **T-04 — Implementar los ajustes de stock en el servicio**
+- [x] **T-04 — Implementar los ajustes de stock en el servicio**
   - **Agente:** Backend.
   - **Qué hace:** implementar el aumento y la disminución mediante una operación explícita y una cantidad entera positiva. Rechazar una disminución superior al stock disponible sin alterar el valor guardado.
   - **Archivos previstos:** `backend/src/services/stock.service.js` (o el módulo de productos si mantenerlo separado no aporta claridad) y sus pruebas.
