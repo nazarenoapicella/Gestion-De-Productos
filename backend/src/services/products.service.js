@@ -104,4 +104,37 @@ function updateProduct(repository, id, input) {
   return repository.update(id, product);
 }
 
-module.exports = { createProduct, updateProduct, ValidationError };
+function normalizeListFilters(filters) {
+  if (!filters || typeof filters !== "object" || Array.isArray(filters)) {
+    throw new ValidationError("Los filtros de productos no son válidos.");
+  }
+
+  const normalized = {};
+  for (const field of ["search", "category"]) {
+    if (!Object.hasOwn(filters, field)) {
+      continue;
+    }
+
+    if (typeof filters[field] !== "string") {
+      throw new ValidationError(`El filtro ${field} debe ser texto.`);
+    }
+
+    const value = filters[field].trim();
+    if (value) {
+      normalized[field] = value;
+    }
+  }
+
+  return normalized;
+}
+
+function listProducts(repository, filters = {}) {
+  return repository.findAll(normalizeListFilters(filters));
+}
+
+module.exports = {
+  createProduct,
+  updateProduct,
+  listProducts,
+  ValidationError,
+};

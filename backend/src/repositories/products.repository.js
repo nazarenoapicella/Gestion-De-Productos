@@ -44,10 +44,31 @@ function findById(database, id) {
   return toProduct(row);
 }
 
-function findAll(database) {
+function escapeLike(value) {
+  return value.replace(/[!%_]/g, "!$&");
+}
+
+function findAll(database, filters = {}) {
+  const conditions = [];
+  const values = [];
+
+  if (filters.search) {
+    conditions.push("unicode_lower(name) LIKE unicode_lower(?) ESCAPE '!'");
+    values.push(`%${escapeLike(filters.search.toLowerCase())}%`);
+  }
+  if (filters.category) {
+    conditions.push("unicode_lower(category) = unicode_lower(?)");
+    values.push(filters.category);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   return database
-    .prepare(`SELECT ${productColumns} FROM products`)
-    .all()
+    .prepare(
+      `SELECT ${productColumns} FROM products
+       ${where}
+       ORDER BY name COLLATE NOCASE ASC, id ASC`,
+    )
+    .all(...values)
     .map(toProduct);
 }
 
