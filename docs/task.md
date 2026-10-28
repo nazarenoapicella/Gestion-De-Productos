@@ -224,7 +224,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     3. Si la API responde `404`, se informa que el producto ya no existe; si responde error de validación, no se muestran falsamente los cambios como guardados.
   - **Verificación:** `node --test frontend/test/t15.test.js` (8/8), `node --test frontend/test/t13.test.js` (10/10), `node --test frontend/test/t14.test.js` (7/7), `npm --prefix backend test` (108/108), `node --check frontend/js/api.js`, `node --check frontend/js/app.js` y `git diff --check`.
 
-- [ ] **T-16 — Incorporar eliminación con confirmación**
+- [x] **T-16 — Incorporar eliminación con confirmación**
   - **Agente:** Frontend.
   - **Qué hace:** pedir confirmación clara que identifique el producto antes de enviar `DELETE`. Actualizar la lista y el resumen solamente si la eliminación se confirma y la API responde exitosamente.
   - **Archivos previstos:** `frontend/js/app.js` y el componente/markup de confirmación si se separa.
@@ -234,6 +234,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     1. Al cancelar la confirmación de borrar `Mouse`, no se envía `DELETE` y el producto sigue visible.
     2. Al confirmar, la API recibe el ID correcto y el producto desaparece del listado después de una respuesta exitosa.
     3. Si la API devuelve error, el producto no se elimina visualmente como si la operación hubiera tenido éxito y se informa el problema. La actualización del resumen se comprueba en T-19.
+  - **Verificación:** `node --test frontend/test/t16.test.js` (5/5), `node --test frontend/test/t13.test.js` (10/10), `node --test frontend/test/t14.test.js` (7/7), `node --test frontend/test/t15.test.js` (8/8), `npm --prefix backend test` (108/108), `node --check frontend/js/api.js`, `node --check frontend/js/app.js`, `node --check frontend/test/t16.test.js` y `git diff --check`.
 
 - [ ] **T-17 — Conectar búsqueda y filtro por categoría**
   - **Agente:** Frontend.
