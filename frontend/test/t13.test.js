@@ -444,10 +444,14 @@ test('la interfaz ejecutada renderiza productos del API en celdas, en orden y co
     for (const cell of actionCells) {
       const controls = cell.children.filter((child) => ['BUTTON', 'A'].includes(child.tagName));
       assert.ok(controls.length > 0, 'Una celda de acciones debe contener controles operables');
-      assert.deepEqual(
-        controls.map((control) => control.textContent.trim()).sort(),
-        ['Editar', 'Eliminar'],
-        'T-15 y T-16 permiten las acciones operables Editar y Eliminar, no acciones de stock'
+      const labels = controls.map((control) => control.textContent.trim()).sort();
+      assert.ok(
+        labels.includes('Editar') && labels.includes('Eliminar'),
+        'Las operaciones operables deben incluir edición y eliminación'
+      );
+      assert.ok(
+        labels.includes('Ajustar stock'),
+        'T-18 incorpora la acción operable de ajuste de stock en la fila'
       );
     }
   }
@@ -492,16 +496,15 @@ test('los errores no se convierten en una lista vacía exitosa ni en datos ficti
   assert.doesNotMatch(app, /catch\s*\([^)]*\)\s*\{[^}]*products\s*=\s*\[\]/s);
 });
 
-test('la UI permite GET, POST, edición y eliminación, pero no adelanta el ajuste de stock', () => {
+test('la UI y la API incorporan ajuste de stock como operación operable del MVP', () => {
   const html = readDeliverable('index.html');
   const api = readDeliverable(path.join('js', 'api.js'));
   const app = readDeliverable(path.join('js', 'app.js'));
 
-  for (const source of [html, api, app]) {
-    assert.doesNotMatch(source, /\bPATCH\b/i);
-    assert.doesNotMatch(source, /\/stock\b|adjustStock/i);
-  }
-  assert.doesNotMatch(
+  assert.match(api, /\bPATCH\b/i);
+  assert.match(api, /\/stock\b|adjustProductStock/i);
+  assert.match(app, /adjustProductStock|Ajustar stock|stock-adjustment/i);
+  assert.match(
     `${html}\n${app}`,
     /<(?:button|a)\b[^>]*>[\s\S]*?\b(?:ajustar stock|aumentar stock|disminuir stock)\b[\s\S]*?<\/(?:button|a)>/i
   );

@@ -112,6 +112,28 @@ export async function updateProduct(id, product) {
   return body;
 }
 
+export async function adjustProductStock(id, adjustment) {
+  const body = await requestJson(
+    `/api/products/${encodeURIComponent(id)}/stock`,
+    {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(adjustment),
+    },
+    "No se pudo ajustar el stock. Inténtalo nuevamente.",
+    "El producto ya no existe o no fue encontrado.",
+  );
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new Error("No se pudo ajustar el stock. Inténtalo nuevamente.");
+  }
+
+  return body;
+}
+
 export async function deleteProduct(id) {
   await requestJson(
     `/api/products/${encodeURIComponent(id)}`,

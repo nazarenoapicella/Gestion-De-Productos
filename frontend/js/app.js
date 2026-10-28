@@ -1,15 +1,22 @@
-import { getProducts, createProduct, updateProduct, deleteProduct } from "./api.js";
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  adjustProductStock,
+  deleteProduct,
+} from "./api.js";
 
 const genericErrorMessage = "No se pudieron cargar los productos. Inténtalo nuevamente.";
 const genericCreateErrorMessage = "No se pudo registrar el producto. Inténtalo nuevamente.";
 const genericUpdateErrorMessage = "No se pudo actualizar el producto. Inténtalo nuevamente.";
+const genericAdjustErrorMessage = "No se pudo ajustar el stock. Inténtalo nuevamente.";
 const genericDeleteErrorMessage = "No se pudo eliminar el producto. Inténtalo nuevamente.";
 
 function setVisible(element, visible) {
   element.hidden = !visible;
 }
 
-function renderProducts(products, tableBody, onEdit, onDelete) {
+function renderProducts(products, tableBody, onEdit, onDelete, onAdjust) {
   tableBody.replaceChildren();
 
   for (const product of products) {
@@ -20,6 +27,7 @@ function renderProducts(products, tableBody, onEdit, onDelete) {
     const stockCell = document.createElement("td");
     const actionsCell = document.createElement("td");
     const editButton = document.createElement("button");
+    const adjustButton = document.createElement("button");
     const deleteButton = document.createElement("button");
 
     nameCell.textContent = product.name;
@@ -33,6 +41,13 @@ function renderProducts(products, tableBody, onEdit, onDelete) {
     editButton.setAttribute("aria-label", `Editar ${product.name}`);
     editButton.addEventListener("click", () => onEdit(product, editButton));
     actionsCell.appendChild(editButton);
+
+    adjustButton.type = "button";
+    adjustButton.className = "button button--secondary button--table";
+    adjustButton.textContent = "Ajustar stock";
+    adjustButton.setAttribute("aria-label", `Ajustar stock de ${product.name}`);
+    adjustButton.addEventListener("click", () => onAdjust(product, adjustButton));
+    actionsCell.appendChild(adjustButton);
 
     deleteButton.type = "button";
     deleteButton.className = "button button--danger button--table";
@@ -76,7 +91,7 @@ function updateCategoryOptions(products) {
 
 let latestInventoryRequest = 0;
 
-async function loadInventory(onEdit, onDelete, filters = {}, updateCategories = false) {
+async function loadInventory(onEdit, onDelete, onAdjust, filters = {}, updateCategories = false) {
   const requestId = ++latestInventoryRequest;
   const loadingState = document.getElementById("loading-state");
   const emptyState = document.getElementById("empty-state");
@@ -124,7 +139,7 @@ async function loadInventory(onEdit, onDelete, filters = {}, updateCategories = 
       return true;
     }
 
-    renderProducts(products, tableBody, onEdit, onDelete);
+    renderProducts(products, tableBody, onEdit, onDelete, onAdjust);
     setVisible(table, true);
     return true;
   } catch (error) {
@@ -152,6 +167,12 @@ function setEditFormError(message) {
   setVisible(formError, Boolean(message));
 }
 
+function setAdjustmentFormError(message) {
+  const formError = document.getElementById("stock-adjustment-error");
+  formError.textContent = message;
+  setVisible(formError, Boolean(message));
+}
+
 function resetForm(form, clearError = setFormError) {
   form.reset();
   clearError("");
@@ -172,8 +193,14 @@ function initializeInventoryPage() {
   const editForm = document.getElementById("edit-product-form");
   const cancelEditButton = document.getElementById("cancel-edit-product");
   const submitEditButton = document.getElementById("submit-edit-product");
+  const adjustmentPanel = document.getElementById("stock-adjustment-panel");
+  const adjustmentForm = document.getElementById("stock-adjustment-form");
+  const cancelAdjustmentButton = document.getElementById("cancel-stock-adjustment");
+  const submitAdjustmentButton = document.getElementById("submit-stock-adjustment");
   let editTrigger = null;
+  let adjustmentTrigger = null;
   let editingProductId = null;
+  let adjustingProductId = null;
   let lastFilterKey = null;
   let pendingFilterKey = null;
 
@@ -185,7 +212,7 @@ function initializeInventoryPage() {
     }
     pendingFilterKey = filterKey;
     lastFilterKey = null;
-    loadInventory(showEditForm, removeProduct, filters).then((refreshed) => {
+    loadInventory(showEditForm, removeProduct, showAdjustStockForm, filters).then((refreshed) => {
       if (pendingFilterKey !== filterKey) {
         return;
       }
@@ -213,7 +240,7 @@ function initializeInventoryPage() {
 
     try {
       await deleteProduct(product.id);
-      const refreshed = await loadInventory(showEditForm, removeProduct, currentFilters(), true);
+      const refreshed = await loadInventory(showEditForm, removeProduct, showAdjustStockForm, currentFilters(), true);
       successState.textContent = refreshed
         ? `Se eliminó el producto ${product.name}.`
         : `Se eliminó el producto ${product.name}, pero no se pudo actualizar el listado.`;
@@ -234,6 +261,7 @@ function initializeInventoryPage() {
     editTrigger = trigger;
     editingProductId = product.id;
     setVisible(createPanel, false);
+    setVisible(adjustmentPanel, false);
     setVisible(editPanel, true);
     setVisible(successState, false);
     setEditFormError("");
@@ -242,6 +270,19 @@ function initializeInventoryPage() {
     editForm.elements.category.value = product.category;
     editForm.elements.price.value = product.price;
     editForm.elements.name.focus();
+  }
+
+  function showAdjustStockForm(product, trigger) {
+    adjustmentTrigger = trigger;
+    adjustingProductId = product.id;
+    setVisible(createPanel, false);
+    setVisible(editPanel, false);
+    setVisible(adjustmentPanel, true);
+    setVisible(successState, false);
+    setAdjustmentFormError("");
+    adjustmentForm.elements.operation.value = "increase";
+    adjustmentForm.elements.quantity.value = "1";
+    adjustmentForm.elements.quantity.focus();
   }
 
   openButton.addEventListener("click", () => {
@@ -285,7 +326,7 @@ function initializeInventoryPage() {
       resetForm(createForm);
       setVisible(createPanel, false);
 
-      const refreshed = await loadInventory(showEditForm, removeProduct, currentFilters(), true);
+      const refreshed = await loadInventory(showEditForm, removeProduct, showAdjustStockForm, currentFilters(), true);
       successState.textContent = refreshed
         ? `Se registró el producto ${createdProduct.name}.`
         : `Se registró el producto ${createdProduct.name}, pero no se pudo actualizar el listado.`;
@@ -305,6 +346,49 @@ function initializeInventoryPage() {
     resetForm(editForm, setEditFormError);
     setVisible(editPanel, false);
     if (editTrigger) editTrigger.focus();
+  });
+
+  cancelAdjustmentButton.addEventListener("click", () => {
+    adjustmentForm.reset();
+    setAdjustmentFormError("");
+    setVisible(adjustmentPanel, false);
+    if (adjustmentTrigger) adjustmentTrigger.focus();
+  });
+
+  adjustmentForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const operation = adjustmentForm.elements.operation.value;
+    const quantity = Number(adjustmentForm.elements.quantity.value);
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      setAdjustmentFormError("La cantidad de ajuste debe ser un número entero mayor que cero.");
+      return;
+    }
+
+    submitAdjustmentButton.disabled = true;
+    const originalSubmitLabel = submitAdjustmentButton.textContent;
+    submitAdjustmentButton.textContent = "Guardando…";
+    setAdjustmentFormError("");
+    setVisible(successState, false);
+
+    try {
+      const updatedProduct = await adjustProductStock(adjustingProductId, { operation, quantity });
+      adjustmentForm.reset();
+      setVisible(adjustmentPanel, false);
+      const refreshed = await loadInventory(showEditForm, removeProduct, showAdjustStockForm, currentFilters(), true);
+      successState.textContent = refreshed
+        ? `Se ajustó el stock de ${updatedProduct.name}.`
+        : `Se ajustó el stock de ${updatedProduct.name}, pero no se pudo actualizar el listado.`;
+      setVisible(successState, true);
+      openButton.focus();
+    } catch (error) {
+      setAdjustmentFormError(error instanceof Error && error.message
+        ? error.message
+        : genericAdjustErrorMessage);
+    } finally {
+      submitAdjustmentButton.disabled = false;
+      submitAdjustmentButton.textContent = originalSubmitLabel;
+    }
   });
 
   editForm.addEventListener("submit", async (event) => {
@@ -333,7 +417,7 @@ function initializeInventoryPage() {
       resetForm(editForm, setEditFormError);
       setVisible(editPanel, false);
 
-      const refreshed = await loadInventory(showEditForm, removeProduct, currentFilters(), true);
+      const refreshed = await loadInventory(showEditForm, removeProduct, showAdjustStockForm, currentFilters(), true);
       successState.textContent = refreshed
         ? `Se actualizó el producto ${updatedProduct.name}.`
         : `Se actualizó el producto ${updatedProduct.name}, pero no se pudo actualizar el listado.`;
@@ -365,7 +449,7 @@ function initializeInventoryPage() {
   const initialFilters = currentFilters();
   const initialFilterKey = `${initialFilters.search}\u0000${initialFilters.category}`;
   pendingFilterKey = initialFilterKey;
-  loadInventory(showEditForm, removeProduct, initialFilters, true).then((refreshed) => {
+  loadInventory(showEditForm, removeProduct, showAdjustStockForm, initialFilters, true).then((refreshed) => {
     if (pendingFilterKey !== initialFilterKey) {
       return;
     }

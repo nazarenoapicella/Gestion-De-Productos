@@ -150,6 +150,36 @@
           </div>
         </form>
       </section>
+
+      <section id="stock-adjustment-panel" class="form-panel" aria-labelledby="stock-adjustment-title" hidden>
+        <div class="form-panel__header">
+          <h2 id="stock-adjustment-title">Ajustar stock</h2>
+        </div>
+        <form id="stock-adjustment-form">
+          <p id="stock-adjustment-error" class="state-message state-message--error" role="alert" hidden></p>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="stock-adjustment-operation">Acción</label>
+              <select id="stock-adjustment-operation" name="operation">
+                <option value="increase">Aumentar</option>
+                <option value="decrease">Disminuir</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="stock-adjustment-quantity">Cantidad</label>
+              <input id="stock-adjustment-quantity" name="quantity" type="number" min="1" step="1" required>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button id="submit-stock-adjustment" class="button button--primary" type="submit">
+              Guardar ajuste
+            </button>
+            <button id="cancel-stock-adjustment" class="button button--secondary" type="button">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </section>
     </main>
   </body>
 </html>
