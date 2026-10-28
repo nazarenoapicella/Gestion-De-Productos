@@ -17,6 +17,15 @@ function toProductDto(product) {
 }
 
 function createProductsController(productsService) {
+  function createProduct(request, response, next) {
+    try {
+      const product = productsService.createProduct(request.body);
+      response.status(201).json(toProductDto(product));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   function listProducts(request, response, next) {
     try {
       const products = productsService.listProducts(request.query);
@@ -45,7 +54,7 @@ function createProductsController(productsService) {
     }
   }
 
-  return { listProducts, getProduct };
+  return { createProduct, listProducts, getProduct };
 }
 
 module.exports = { createProductsController };

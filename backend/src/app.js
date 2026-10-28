@@ -1,6 +1,7 @@
 const express = require("express");
 const productsRepository = require("./repositories/products.repository");
 const {
+  createProduct: createProductService,
   getProduct,
   listProducts,
   ValidationError,
@@ -15,9 +16,15 @@ function createProductsService(database) {
     findById(id) {
       return productsRepository.findById(database, id);
     },
+    create(product) {
+      return productsRepository.create(database, product);
+    },
   };
 
   return {
+    createProduct(input) {
+      return createProductService(repository, input);
+    },
     listProducts(filters) {
       return listProducts(repository, filters);
     },
@@ -56,6 +63,7 @@ function createApp({ database, productsService } = {}) {
   const service = productsService || createProductsService(database);
   const app = express();
 
+  app.use(express.json());
   app.use("/api/products", createProductsRouter(service));
   app.use(errorHandler);
 
