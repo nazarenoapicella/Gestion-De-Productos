@@ -95,12 +95,35 @@ function createProductsController(productsService) {
     }
   }
 
+  function adjustStock(request, response, next) {
+    try {
+      const product = productsService.adjustStock(
+        request.params.id,
+        request.body,
+      );
+      if (product.status === "not_found") {
+        response.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "No se encontró el producto solicitado.",
+          },
+        });
+        return;
+      }
+
+      response.json(toProductDto(product));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   return {
     createProduct,
     listProducts,
     getProduct,
     updateProduct,
     deleteProduct,
+    adjustStock,
   };
 }
 

@@ -7,6 +7,7 @@ function createProductsRouter(productsService) {
 
   router.post("/", controller.createProduct);
   router.get("/", controller.listProducts);
+  router.patch("/:id/stock", controller.adjustStock);
   router.delete("/:id", controller.deleteProduct);
   router.put("/:id", controller.updateProduct);
   router.get("/:id", controller.getProduct);

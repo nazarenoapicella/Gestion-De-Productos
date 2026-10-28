@@ -50,4 +50,4 @@ function adjustStock(repository, id, input) {
   throw new Error("El repositorio devolvió un resultado de ajuste inválido.");
 }
 
-module.exports = { adjustStock };
+module.exports = { adjustStock, StockAdjustmentError };

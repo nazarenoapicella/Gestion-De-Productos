@@ -8,6 +8,10 @@ const {
   updateProduct: updateProductService,
   ValidationError,
 } = require("./services/products.service");
+const {
+  adjustStock: adjustStockService,
+  StockAdjustmentError,
+} = require("./services/stock.service");
 const { createProductsRouter } = require("./routes/products.routes");
 
 function createProductsService(database) {
@@ -27,6 +31,9 @@ function createProductsService(database) {
     deleteById(id) {
       return productsRepository.deleteById(database, id);
     },
+    adjustStock(id, operation, quantity) {
+      return productsRepository.adjustStock(database, id, operation, quantity);
+    },
   };
 
   return {
@@ -45,6 +52,9 @@ function createProductsService(database) {
     deleteProduct(id) {
       return deleteProductService(repository, Number(id));
     },
+    adjustStock(id, input) {
+      return adjustStockService(repository, Number(id), input);
+    },
   };
 }
 
@@ -54,11 +64,22 @@ function errorHandler(error, request, response, next) {
     return;
   }
 
-  if (error instanceof ValidationError) {
+  const isInvalidStockAdjustment =
+    error instanceof StockAdjustmentError &&
+    ["VALIDATION_ERROR", "INSUFFICIENT_STOCK"].includes(error.code);
+  const isInvalidJson = error.type === "entity.parse.failed";
+
+  if (
+    error instanceof ValidationError ||
+    isInvalidStockAdjustment ||
+    isInvalidJson
+  ) {
     response.status(400).json({
       error: {
         code: "VALIDATION_ERROR",
-        message: error.message,
+        message: isInvalidJson
+          ? "El cuerpo de la solicitud debe contener JSON válido."
+          : error.message,
       },
     });
     return;
