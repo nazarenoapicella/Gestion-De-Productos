@@ -92,7 +92,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     5. Buscar `router` devuelve una lista vacía, no un error técnico.
     6. Una búsqueda vacía y sin categoría seleccionada vuelve a devolver todos los productos.
 
-- [ ] **T-06 — Calcular los indicadores del inventario**
+- [x] **T-06 — Calcular los indicadores del inventario**
   - **Agente:** Backend.
   - **Qué hace:** calcular productos registrados, suma de unidades en stock y cantidad de productos cuyo stock es menor o igual que cinco. Los indicadores se calculan a partir de la tabla de productos; no se almacenan como contadores separados.
   - **Archivos previstos:** `backend/src/repositories/summary.repository.js` (o consulta equivalente), `backend/src/services/summary.service.js` y pruebas.
