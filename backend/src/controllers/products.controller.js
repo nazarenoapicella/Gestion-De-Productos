@@ -54,7 +54,29 @@ function createProductsController(productsService) {
     }
   }
 
-  return { createProduct, listProducts, getProduct };
+  function updateProduct(request, response, next) {
+    try {
+      const product = productsService.updateProduct(
+        request.params.id,
+        request.body,
+      );
+      if (!product) {
+        response.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "No se encontró el producto solicitado.",
+          },
+        });
+        return;
+      }
+
+      response.json(toProductDto(product));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  return { createProduct, listProducts, getProduct, updateProduct };
 }
 
 module.exports = { createProductsController };

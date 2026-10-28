@@ -7,6 +7,7 @@ function createProductsRouter(productsService) {
 
   router.post("/", controller.createProduct);
   router.get("/", controller.listProducts);
+  router.put("/:id", controller.updateProduct);
   router.get("/:id", controller.getProduct);
 
   return router;

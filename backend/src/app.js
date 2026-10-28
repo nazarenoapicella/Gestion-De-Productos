@@ -4,6 +4,7 @@ const {
   createProduct: createProductService,
   getProduct,
   listProducts,
+  updateProduct: updateProductService,
   ValidationError,
 } = require("./services/products.service");
 const { createProductsRouter } = require("./routes/products.routes");
@@ -19,6 +20,9 @@ function createProductsService(database) {
     create(product) {
       return productsRepository.create(database, product);
     },
+    update(id, fields) {
+      return productsRepository.update(database, id, fields);
+    },
   };
 
   return {
@@ -30,6 +34,9 @@ function createProductsService(database) {
     },
     findProduct(id) {
       return getProduct(repository, Number(id));
+    },
+    updateProduct(id, input) {
+      return updateProductService(repository, Number(id), input);
     },
   };
 }
