@@ -1,5 +1,6 @@
 const editableFields = ["name", "description", "category", "price"];
 const creationFields = [...editableFields, "stock"];
+const updateFields = [...editableFields, "stock"];
 
 class ValidationError extends Error {
   constructor(message) {
@@ -155,34 +156,32 @@ function updateProduct(repository, idValue, input) {
   const canReadCurrent = typeof repository.findById === "function";
   const currentProduct = canReadCurrent ? repository.findById(id) : null;
   if (canReadCurrent && !currentProduct) return null;
+
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new ValidationError("Los datos del producto no son válidos.");
   }
 
-  // El stock se modifica exclusivamente mediante PATCH /:id/stock.
-  // Se ignora incluso si un cliente antiguo lo envía dentro del PUT.
-  const editableInput = { ...input };
-  delete editableInput.stock;
-  const unexpectedField = Object.keys(editableInput).find((field) => !editableFields.includes(field));
+  const unexpectedField = Object.keys(input).find((field) => !updateFields.includes(field));
   if (unexpectedField) {
     throw new ValidationError(`El campo ${unexpectedField} no está permitido en esta operación.`);
   }
-  for (const field of ["name", "category", "price"]) {
-    if (!Object.hasOwn(editableInput, field)) {
+  for (const field of ["name", "category", "price", "stock"]) {
+    if (!Object.hasOwn(input, field)) {
       throw new ValidationError(`El campo ${field} es obligatorio para editar un producto.`);
     }
   }
 
   const mergedInput = {
-    name: editableInput.name,
-    description: Object.hasOwn(editableInput, "description")
-      ? editableInput.description
+    name: input.name,
+    description: Object.hasOwn(input, "description")
+      ? input.description
       : currentProduct?.description ?? null,
-    category: editableInput.category,
-    price: editableInput.price,
+    category: input.category,
+    price: input.price,
+    stock: input.stock,
   };
 
-  const product = validateProduct(mergedInput, editableFields);
+  const product = validateProduct(mergedInput, updateFields);
   ensureUniqueName(repository, product.name, id);
   if (typeof repository.findAll === "function") {
     product.category = findCanonicalCategory(repository, product.category);

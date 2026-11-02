@@ -238,7 +238,7 @@ test("descripción omitida, nula o vacía se persiste como NULL", () => {
   });
 });
 
-test("editar actualiza los datos comerciales e ignora el stock enviado por error", () => {
+test("editar actualiza los datos comerciales y el stock validado", () => {
   withDatabase((database) => {
     const repository = createRepository(database);
     const original = createPersistedProduct(repository);
@@ -273,13 +273,14 @@ test("editar actualiza los datos comerciales e ignora el stock enviado por error
       "description",
       "name",
       "price_cents",
+      "stock",
     ]);
     assert.equal(updated.name, "Mouse Pro");
     assert.equal(updated.description, "Versión actualizada");
     assert.equal(updated.category, "Accesorios");
     assert.equal(updated.price_cents, 175025);
-    assert.equal(updated.stock, original.stock);
-    assert.equal(repository.findById(original.id).stock, original.stock);
+    assert.equal(updated.stock, 99);
+    assert.equal(repository.findById(original.id).stock, 99);
   });
 });
 
@@ -289,7 +290,7 @@ test("editar rechaza los campos obligatorios omitidos o nulos sin modificar el p
     const repository = createRepository(database);
     const original = createPersistedProduct(repository);
 
-    for (const field of ["name", "category", "price"]) {
+    for (const field of ["name", "category", "price", "stock"]) {
       const missing = createInput({ name: "Mouse Pro", category: "Accesorios", price: "1750.25" });
       delete missing[field];
       assertValidationError(() => updateProduct(repository, original.id, missing));
@@ -311,6 +312,9 @@ const invalidUpdateInputs = [
   ["nombre de 101 caracteres", { name: "n".repeat(101) }],
   ["descripción de 501 caracteres", { description: "d".repeat(501) }],
   ["categoría de 51 caracteres", { category: "c".repeat(51) }],
+  ["stock negativo", { stock: -1 }],
+  ["stock decimal", { stock: 1.5 }],
+  ["stock no numérico", { stock: "abc" }],
 ];
 
 for (const [label, overrides] of invalidUpdateInputs) {

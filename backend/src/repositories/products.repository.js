@@ -9,7 +9,7 @@ const productColumns = `
   updated_at
 `;
 
-const editableColumns = ["name", "description", "category", "price_cents"];
+const editableColumns = ["name", "description", "category", "price_cents", "stock"];
 
 function toProduct(row) {
   return row ? { ...row } : null;
@@ -141,11 +141,33 @@ function adjustStock(database, id, operation, quantity) {
 }
 
 function deleteById(database, id) {
-  const result = database
-    .prepare("DELETE FROM products WHERE id = ?")
-    .run(id);
+  database.exec("BEGIN IMMEDIATE");
+  let transactionOpen = true;
+  try {
+    const pendingBudget = database.prepare(
+      `SELECT 1 AS found FROM budget_items bi
+       INNER JOIN budgets b ON b.id = bi.budget_id
+       WHERE bi.product_id = ? AND b.status = 'pending' LIMIT 1`,
+    ).get(id);
+    if (pendingBudget) {
+      const error = new Error(
+        "No se puede eliminar este producto porque tiene stock reservado en un presupuesto pendiente.",
+      );
+      error.code = "PRODUCT_RESERVED";
+      error.statusCode = 409;
+      throw error;
+    }
 
-  return result.changes > 0;
+    const result = database
+      .prepare("DELETE FROM products WHERE id = ?")
+      .run(id);
+    database.exec("COMMIT");
+    transactionOpen = false;
+    return result.changes > 0;
+  } catch (error) {
+    if (transactionOpen) database.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 module.exports = {

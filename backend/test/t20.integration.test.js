@@ -56,7 +56,7 @@ async function withApi(databasePath, callback) {
   }
 }
 
-test("T-20: flujo integrador de inventario, resumen, ajuste, edición, búsqueda y persistencia", async () => {
+test("T-20: flujo integrador de inventario, resumen, edición de producto y stock, búsqueda y persistencia", async () => {
   const databasePath = createDatabasePath();
 
   await withApi(databasePath, async (baseUrl, database) => {
@@ -135,7 +135,7 @@ test("T-20: flujo integrador de inventario, resumen, ajuste, edición, búsqueda
     });
 
     assert.equal(updateResponse.response.status, 200);
-    assert.equal(updateResponse.body.stock, 7);
+    assert.equal(updateResponse.body.stock, 99);
     assert.equal(updateResponse.body.price, "1599.99");
 
     const searchResponse = await requestJson(`${baseUrl}/api/products?search=mouse&category=periféricos`);

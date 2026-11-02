@@ -30,7 +30,7 @@ No hay roles, permisos diferentes ni administración de múltiples comercios en 
 5. Eliminar un producto después de una confirmación en la interfaz.
 6. Buscar productos por coincidencia parcial de nombre.
 7. Filtrar por categoría y combinar el filtro con la búsqueda.
-8. Aumentar o disminuir el stock mediante una acción específica.
+8. Actualizar el stock disponible desde el formulario de edición del producto.
 9. Mostrar un resumen con productos registrados, unidades en stock y productos con stock bajo.
 10. Validar datos y mostrar errores comprensibles.
 
@@ -99,17 +99,17 @@ El precio debe recibirse como texto decimal no negativo, sin separadores de mile
 
 El stock inicial y el stock resultante de cualquier ajuste deben ser números enteros mayores o iguales que cero. No se aceptan decimales, valores negativos ni cantidades no numéricas.
 
-### RN-05 — Edición de datos comerciales sin modificar stock
+### RN-05 — Edición del producto y su stock disponible
 
-La edición normal actualiza nombre, descripción, categoría y precio. No modifica el stock, aunque un cliente envíe ese campo por error. El stock inicial se define al crear el producto y, posteriormente, solo cambia mediante la acción específica de ajuste (RN-06 y RN-07).
+La edición actualiza nombre, descripción, categoría, precio y stock disponible en una única operación. El stock debe ser un entero seguro no negativo. La interfaz concentra la modificación de stock dentro del formulario de edición; no ofrece una acción independiente por fila. La API histórica de ajustes relativos se conserva por compatibilidad.
 
-### RN-06 — Aumento del stock
+### RN-06 — Aumento del stock (compatibilidad de API)
 
-El usuario selecciona la opción de aumentar e indica una cantidad entera mayor que cero. El sistema suma esa cantidad al stock actual y guarda el resultado si la operación es válida.
+El endpoint histórico permite seleccionar la operación de aumento e indicar una cantidad entera mayor que cero. El sistema suma esa cantidad al stock actual. La interfaz principal actualiza el valor absoluto desde el formulario de edición del producto.
 
-### RN-07 — Disminución del stock
+### RN-07 — Disminución del stock (compatibilidad de API)
 
-El usuario selecciona la opción de disminuir e indica una cantidad entera mayor que cero. Si esa cantidad es mayor que el stock actual, el sistema rechaza la operación y mantiene el stock sin cambios. El stock nunca puede quedar negativo.
+El endpoint histórico permite seleccionar la operación de disminución e indicar una cantidad entera mayor que cero. Si esa cantidad es mayor que el stock actual, el sistema rechaza la operación. La interfaz principal no expone esta operación en una acción separada: permite definir el stock disponible desde la edición, siempre como entero seguro no negativo.
 
 ### RN-08 — Umbral de stock bajo
 
@@ -155,6 +155,24 @@ Las operaciones exitosas deben guardarse en SQLite. Los datos no deben depender 
 
 Todo dato recibido debe validarse en el servidor, aunque ya haya sido validado en el navegador. Una petición inválida no debe modificar parcialmente los datos.
 
+### RN-19 — Crear presupuestos con reserva de stock
+
+El usuario puede crear un presupuesto seleccionando entre los productos con stock disponible e indicando una cantidad entera positiva para cada uno. El backend vuelve a validar los identificadores, cantidades, existencia y disponibilidad en el momento de confirmar. El presupuesto conserva el nombre del producto, el precio unitario, la cantidad, el subtotal y el total como fotografía histórica. El precio se toma del producto en el momento de la emisión, no del navegador.
+
+La creación del presupuesto, sus líneas y el descuento del stock se ejecutan en una única transacción. Si una línea no es válida, un producto no existe, el stock es insuficiente o el importe supera el rango admitido, se cancela toda la operación y no se reserva ninguna unidad.
+
+### RN-20 — PDF de presupuesto
+
+Al generar un presupuesto, el sistema debe producir un PDF descargable que identifique el número y la fecha del presupuesto, liste los productos, cantidades, precios unitarios y subtotales, y muestre el total general en pesos argentinos. El PDF se puede volver a descargar desde los listados.
+
+### RN-21 — Resolución de presupuestos
+
+Un presupuesto nuevo queda en estado `pending`. Solo se puede resolver una vez como `paid` o `rejected`. Al marcarlo pagado, deja la lista de pendientes y el stock no se devuelve porque ya fue reservado al crear el presupuesto. Al rechazarlo, el stock reservado se devuelve exactamente una vez y el presupuesto pasa al historial. Los presupuestos resueltos no se eliminan del historial.
+
+### RN-22 — Protección de productos reservados
+
+Un producto asociado a un presupuesto pendiente no se puede eliminar, para garantizar que el sistema pueda devolver sus unidades en caso de rechazo. La edición comercial posterior no modifica los datos históricos del presupuesto.
+
 ## 7. Historias de usuario y criterios de aceptación
 
 ### HU-01 — Consultar inventario
@@ -187,7 +205,7 @@ Criterios de aceptación:
 Criterios de aceptación:
 
 - El formulario muestra los valores actuales del producto.
-- Se pueden cambiar nombre, descripción, categoría y precio desde el flujo de edición. El stock se actualiza únicamente desde la acción específica de ajuste.
+- Se pueden cambiar nombre, descripción, categoría, precio y stock disponible desde el mismo formulario de edición. El stock debe ser un entero seguro no negativo.
 - Una actualización inválida no reemplaza parcialmente los datos existentes.
 - Si el producto no existe, se informa que no fue encontrado.
 - El nombre es único con normalización de mayúsculas, minúsculas y tildes. Las categorías se pueden reutilizar entre productos; las variantes equivalentes conservan una misma escritura canónica.
@@ -213,20 +231,45 @@ Criterios de aceptación:
 - El filtro de categoría coincide con la categoría completa sin distinguir mayúsculas y minúsculas.
 - Es posible combinar búsqueda y categoría.
 - Si no hay coincidencias, se informa que no se encontraron productos.
-- Limpiar los filtros vuelve a mostrar todos los productos.
+- Borrar el texto de búsqueda y seleccionar “Todas las categorías” vuelve a mostrar todos los productos; no se requieren botones separados para buscar o limpiar.
 
-### HU-06 — Ajustar el stock
+### HU-06 — Actualizar el stock desde el formulario de edición
 
-**Como** encargado, **quiero** aumentar o disminuir las unidades de un producto, **para** mantener actualizada la cantidad disponible.
+**Como** encargado, **quiero** modificar el stock disponible dentro del formulario de edición del producto, **para** mantener actualizada la cantidad de unidades sin utilizar una acción separada.
 
 Criterios de aceptación:
 
-- La acción exige elegir aumento o disminución e ingresar una cantidad entera positiva.
-- Un aumento válido incrementa el stock por la cantidad indicada.
-- Una disminución válida resta la cantidad indicada.
-- Si se intenta disminuir más de lo disponible, la operación se rechaza y el stock permanece igual.
-- El sistema no permite stock negativo ni cambios con cantidad cero o decimal.
-- El nuevo stock aparece en la interfaz después de una respuesta exitosa.
+- El formulario de edición muestra el stock disponible actual, igual que el formulario de creación.
+- El stock se ingresa como un entero seguro mayor o igual que cero; se rechazan valores negativos, decimales, vacíos y no numéricos.
+- Guardar la edición envía los datos comerciales y el stock en una única operación.
+- Una edición inválida no modifica ningún campo ni el stock guardado.
+- La tabla y los indicadores se actualizan después de una respuesta exitosa.
+
+### HU-08 — Crear y descargar presupuestos
+
+**Como** encargado, **quiero** seleccionar productos y cantidades, **para** emitir un presupuesto con el detalle y el precio total en PDF.
+
+Criterios de aceptación:
+
+- El formulario permite seleccionar productos mediante un `select` y escribir cantidades enteras positivas.
+- Solo se permiten productos con stock disponible y la cantidad no puede superar el stock actual.
+- Se muestra el precio unitario, subtotal por producto y total general antes de confirmar.
+- Al generar, el servidor vuelve a validar y reserva el stock de manera atómica.
+- Si falla cualquier línea, no se crea el presupuesto ni se descuenta parcialmente el stock.
+- Se descarga un PDF con el número, la fecha, el detalle y el total.
+
+### HU-09 — Resolver presupuestos
+
+**Como** encargado, **quiero** marcar un presupuesto como pagado o rechazado, **para** reflejar el resultado de la operación y mantener el inventario correcto.
+
+Criterios de aceptación:
+
+- Los presupuestos pendientes se muestran en una lista propia.
+- Al marcar uno como pagado, desaparece de pendientes, queda en el historial y el stock no cambia.
+- Al rechazarlo, desaparece de pendientes, queda en el historial y se restaura el stock reservado.
+- Un presupuesto resuelto no puede volver a resolverse ni devolver stock por segunda vez.
+- Mientras existan reservas pendientes, el producto relacionado no se puede eliminar.
+- Cada presupuesto conserva los nombres y precios que tenía cuando se generó, incluso si después se modifica el catálogo.
 
 ### HU-07 — Consultar resumen y reposición
 
@@ -237,7 +280,7 @@ Criterios de aceptación:
 - Se muestran los productos registrados, las unidades en stock y los productos con stock bajo.
 - Se considera stock bajo una cantidad menor o igual que cinco.
 - Los productos con stock cero también aparecen identificados como stock bajo.
-- Los indicadores se actualizan después de crear, editar, eliminar o ajustar el stock.
+- Los indicadores se actualizan después de crear, editar (incluido el stock), eliminar o reservar/devolver unidades mediante un presupuesto.
 - Si el inventario está vacío, los tres indicadores muestran cero.
 
 ## 8. Casos límite y comportamiento esperado
@@ -254,11 +297,18 @@ Criterios de aceptación:
 | Se intenta editar o borrar un identificador inexistente. | Responder no encontrado; no alterar otros productos. |
 | Se utiliza una búsqueda que no coincide con ningún producto. | Mostrar un estado sin resultados, no un error técnico. |
 | No se han registrado productos. | Mostrar un estado vacío y los indicadores en cero. |
-| Se envía un campo `stock` dentro de la edición normal. | Ignorar ese campo en la operación de edición; el stock solo cambia mediante el ajuste. |
+| Se edita el producto y se envía un stock entero válido. | Actualizar datos comerciales y stock dentro de la misma operación `PUT`. |
 | Se cancela el cuadro de confirmación de borrado. | No realizar la eliminación. |
 | El servidor o la base de datos no están disponibles. | Mostrar un error comprensible; no informar falsamente que la operación se guardó. |
 | Una solicitud inválida llega directamente a la API, sin pasar por el formulario web. | El backend la rechaza; no depende de la validación del navegador. |
 | Se intenta registrar un producto con un nombre ya existente, ignorando mayúsculas, minúsculas y tildes. | Rechazar el alta y conservar el inventario sin cambios. |
+| Se intenta presupuestar una cantidad cero, negativa, decimal, texto o superior al stock. | Rechazar el presupuesto completo; no reservar ninguna unidad. |
+| Uno de varios productos de un presupuesto tiene stock insuficiente. | Cancelar toda la transacción; el stock de ninguna línea se modifica. |
+| Se genera un presupuesto válido. | Guardar precios y nombres históricos, descontar el stock y generar el PDF. |
+| Se marca un presupuesto como pagado. | Sacarlo de pendientes, conservarlo en el historial y mantener descontado el stock. |
+| Se marca un presupuesto como rechazado. | Devolver todo el stock reservado una sola vez y conservar el presupuesto en el historial. |
+| Se intenta resolver por segunda vez un presupuesto. | Rechazar con conflicto y no modificar el stock. |
+| Se intenta eliminar un producto con un presupuesto pendiente. | Rechazar la eliminación para preservar la capacidad de devolver el stock. |
 
 ## 9. API prevista
 
@@ -269,10 +319,15 @@ La implementación utilizará rutas JSON bajo `/api`. Los nombres exactos pueden
 | `GET /api/products` | Listar productos; admite `search` y `category` como filtros opcionales. |
 | `GET /api/products/:id` | Consultar un producto por identificador. |
 | `POST /api/products` | Crear un producto. |
-| `PUT /api/products/:id` | Actualizar nombre, descripción, categoría y precio, no el stock. Exige nombre, categoría y precio; descripción es opcional y se conserva si se omite. |
+| `PUT /api/products/:id` | Actualizar nombre, descripción, categoría, precio y stock. Exige nombre, categoría, precio y stock; descripción es opcional y se conserva si se omite. |
 | `DELETE /api/products/:id` | Eliminar un producto. |
 | `PATCH /api/products/:id/stock` | Aumentar o disminuir el stock mediante operación y cantidad. |
 | `GET /api/summary` | Obtener los tres indicadores del inventario. |
+| `POST /api/budgets` | Crear un presupuesto y reservar el stock. |
+| `GET /api/budgets` | Listar presupuestos pendientes e históricos. |
+| `GET /api/budgets/:id` | Consultar un presupuesto y sus líneas. |
+| `GET /api/budgets/:id/pdf` | Descargar el PDF del presupuesto. |
+| `PATCH /api/budgets/:id/status` | Marcar el presupuesto como `paid` o `rejected`. |
 
 Las solicitudes y respuestas intercambian JSON, salvo que una respuesta no tenga cuerpo. Los errores deben utilizar códigos HTTP apropiados: `400` para datos inválidos, `404` para un producto inexistente y `500` para un error inesperado del servidor. Los errores JSON usan `{ "error": { "code": "...", "message": "...", "fields": {} } }`; `fields` se omite cuando no corresponda. Los códigos son `VALIDATION_ERROR`, `NOT_FOUND` e `INTERNAL_SERVER_ERROR`, respectivamente. Los errores internos no deben exponer detalles técnicos en la respuesta. El DTO de producto usa `id`, `name`, `description`, `category`, `price`, `stock`, `createdAt` y `updatedAt`; `price` es texto decimal exacto conforme a D-015 y no se devuelve `price_cents`. No se incluye `lowStock` sin una decisión que lo adopte. Ver D-016.
 
@@ -312,3 +367,5 @@ El MVP se considera terminado cuando:
 
 - [cambio] 2026-10-22 — Se redacta la primera especificación del MVP a partir de la idea y de las decisiones iniciales.
 - [cambio] 2026-10-28 — RN-03 y el contrato de producto precisan el transporte de `price` como texto decimal exacto, conforme a D-015.
+- [cambio] 2026-11-02 — Se incorporan reglas, historias, casos límite y endpoints para presupuestos, PDF, reservas de stock y resolución de operaciones.
+- [cambio] 2026-11-02 — La búsqueda del inventario filtra al escribir y el stock se edita dentro del formulario del producto; se elimina la acción independiente de ajuste.

@@ -119,9 +119,10 @@ const editInput = {
   description: "Mouse inalámbrico actualizado",
   category: "Accesorios",
   price: "1500.00",
+  stock: 6,
 };
 
-test("PUT /api/products/:id edita los datos comerciales y conserva el stock", async () => {
+test("PUT /api/products/:id actualiza los datos comerciales y el stock", async () => {
   await withApi(async (baseUrl, database) => {
     const original = createPersistedProduct(database);
     const other = createPersistedProduct(database, {
@@ -150,7 +151,7 @@ test("PUT /api/products/:id edita los datos comerciales y conserva el stock", as
       id: original.id,
       ...editInput,
       price: "1500.00",
-      stock: original.stock,
+      stock: 99,
     });
 
     const persisted = productsRepository.findById(database, original.id);
@@ -160,7 +161,7 @@ test("PUT /api/products/:id edita los datos comerciales y conserva el stock", as
       description: "Mouse inalámbrico actualizado",
       category: "Accesorios",
       price_cents: 150000,
-      stock: original.stock,
+      stock: 99,
       created_at: original.created_at,
       updated_at: body.updatedAt,
     });
@@ -191,12 +192,12 @@ test("PUT /api/products/:id permite omitir description y conserva la anterior", 
       ...inputWithoutDescription,
       description: original.description,
       price: "1500.00",
-      stock: 5,
+      stock: 6,
     });
     const persisted = productsRepository.findById(database, original.id);
     assert.equal(persisted.description, original.description);
     assert.equal(persisted.price_cents, 150000);
-    assert.equal(persisted.stock, 5);
+    assert.equal(persisted.stock, 6);
     assert.equal(persisted.name, body.name);
     assert.equal(persisted.category, body.category);
     assert.equal(persisted.updated_at, body.updatedAt);
@@ -216,6 +217,10 @@ const invalidUpdates = [
   ["nombre nulo", { name: null }],
   ["categoría nula", { category: null }],
   ["precio nulo", { price: null }],
+  ["stock negativo", { stock: -1 }],
+  ["stock decimal", { stock: 1.5 }],
+  ["stock no numérico", { stock: "abc" }],
+  ["stock nulo", { stock: null }],
 ];
 
 for (const [label, invalidField] of invalidUpdates) {
@@ -246,10 +251,10 @@ for (const [label, invalidField] of invalidUpdates) {
 }
 
 
-test("PUT /api/products/:id exige nombre, categoría y precio", async () => {
+test("PUT /api/products/:id exige nombre, categoría, precio y stock", async () => {
   await withApi(async (baseUrl, database) => {
     const original = createPersistedProduct(database);
-    for (const field of ["name", "category", "price"]) {
+    for (const field of ["name", "category", "price", "stock"]) {
       const input = { ...editInput };
       delete input[field];
       const { response, body } = await putProduct(baseUrl, original.id, input);

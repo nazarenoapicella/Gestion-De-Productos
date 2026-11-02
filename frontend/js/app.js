@@ -3,14 +3,16 @@ import {
   getSummary,
   createProduct,
   updateProduct,
-  adjustProductStock,
   deleteProduct,
+  getBudgets,
+  createBudget,
+  resolveBudget,
+  getBudgetPdf,
 } from "./api.js";
 
 const genericErrorMessage = "No se pudieron cargar los productos. Intentá nuevamente.";
 const genericCreateErrorMessage = "No se pudo registrar el producto. Intentá nuevamente.";
 const genericUpdateErrorMessage = "No se pudo actualizar el producto. Intentá nuevamente.";
-const genericAdjustErrorMessage = "No se pudo ajustar el stock. Intentá nuevamente.";
 const genericDeleteErrorMessage = "No se pudo eliminar el producto. Intentá nuevamente.";
 const maximumSafeInteger = BigInt(Number.MAX_SAFE_INTEGER);
 
@@ -35,7 +37,7 @@ function formatPrice(price) {
   return `$ ${groupedInteger},${decimals}`;
 }
 
-function renderProducts(products, tableBody, onEdit, onAdjust, onDelete) {
+function renderProducts(products, tableBody, onEdit, onDelete) {
   tableBody.replaceChildren();
 
   for (const product of products) {
@@ -47,7 +49,6 @@ function renderProducts(products, tableBody, onEdit, onAdjust, onDelete) {
     const actionsCell = document.createElement("td");
     const actions = document.createElement("div");
     const editButton = document.createElement("button");
-    const adjustButton = document.createElement("button");
     const deleteButton = document.createElement("button");
 
     nameCell.textContent = product.name;
@@ -66,19 +67,13 @@ function renderProducts(products, tableBody, onEdit, onAdjust, onDelete) {
     editButton.setAttribute("aria-label", `Editar ${product.name}`);
     editButton.addEventListener("click", () => onEdit(product, editButton));
 
-    adjustButton.type = "button";
-    adjustButton.className = "button button--secondary button--table";
-    adjustButton.textContent = "Ajustar stock";
-    adjustButton.setAttribute("aria-label", `Ajustar stock de ${product.name}`);
-    adjustButton.addEventListener("click", () => onAdjust(product, adjustButton));
-
     deleteButton.type = "button";
     deleteButton.className = "button button--danger button--table";
     deleteButton.textContent = "Eliminar";
     deleteButton.setAttribute("aria-label", `Eliminar ${product.name}`);
     deleteButton.addEventListener("click", () => onDelete(product, deleteButton));
 
-    actions.append(editButton, adjustButton, deleteButton);
+    actions.append(editButton, deleteButton);
     actionsCell.appendChild(actions);
     row.append(nameCell, categoryCell, priceCell, stockCell, actionsCell);
     tableBody.appendChild(row);
@@ -171,11 +166,11 @@ function validateProductData(product, { includeStock = false } = {}) {
 
   if (includeStock) {
     if (typeof product.stockText !== "string" || !/^\d+$/.test(product.stockText)) {
-      return "El stock inicial debe ser un número entero mayor o igual que cero.";
+      return "El stock debe ser un número entero mayor o igual que cero.";
     }
     const stock = Number(product.stockText);
     if (!Number.isSafeInteger(stock) || stock < 0) {
-      return "El stock inicial está fuera del rango admitido.";
+      return "El stock está fuera del rango admitido.";
     }
   }
   return "";
@@ -195,13 +190,6 @@ function setEditFormError(message) {
   setVisible(formError, Boolean(message));
 }
 
-function setAdjustmentFormError(message) {
-  const formError = document.getElementById("stock-adjustment-error");
-  if (!formError) return;
-  formError.textContent = message;
-  setVisible(formError, Boolean(message));
-}
-
 function resetForm(form, clearError = setFormError) {
   form.reset();
   clearError("");
@@ -209,7 +197,7 @@ function resetForm(form, clearError = setFormError) {
 
 let latestInventoryRequest = 0;
 
-async function loadInventory(onEdit, onAdjust, onDelete, filters = {}, updateCategories = false) {
+async function loadInventory(onEdit, onDelete, filters = {}, updateCategories = false) {
   const requestId = ++latestInventoryRequest;
   const loadingState = document.getElementById("loading-state");
   const emptyState = document.getElementById("empty-state");
@@ -261,7 +249,7 @@ async function loadInventory(onEdit, onAdjust, onDelete, filters = {}, updateCat
       return true;
     }
 
-    renderProducts(products, tableBody, onEdit, onAdjust, onDelete);
+    renderProducts(products, tableBody, onEdit, onDelete);
     setVisible(table, true);
     return true;
   } catch (error) {
@@ -313,6 +301,438 @@ async function loadSummary() {
   }
 }
 
+function formatCentsAsPrice(cents) {
+  const value = BigInt(cents);
+  const whole = (value / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const fraction = String(value % 100n).padStart(2, "0");
+  return `$ ${whole},${fraction}`;
+}
+
+function priceTextToCents(price) {
+  if (typeof price !== "string" || !/^\d+(?:\.\d{1,2})?$/.test(price)) {
+    throw new Error("El precio del producto no es válido.");
+  }
+  const [whole, fraction = ""] = price.split(".");
+  return BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"));
+}
+
+function formatBudgetDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("es-AR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function createTextCell(text) {
+  const cell = document.createElement("td");
+  cell.textContent = String(text);
+  return cell;
+}
+
+function createBudgetPdfLink(budgetId) {
+  const link = document.createElement("a");
+  link.className = "budget-pdf-link";
+  link.href = `/api/budgets/${encodeURIComponent(budgetId)}/pdf`;
+  link.textContent = "Descargar PDF";
+  link.setAttribute("aria-label", `Descargar PDF del presupuesto ${budgetId}`);
+  return link;
+}
+
+function initializeBudgetsPage({ refreshInventory, refreshSummary }) {
+  const productSelect = document.getElementById("budget-product-select");
+  const quantityInput = document.getElementById("budget-product-quantity");
+  const stockHelp = document.getElementById("budget-stock-help");
+  const addItemButton = document.getElementById("add-budget-item");
+  const generateButton = document.getElementById("generate-budget");
+  const draftTable = document.getElementById("budget-draft-table");
+  const draftBody = document.getElementById("budget-draft-list");
+  const draftEmpty = document.getElementById("budget-draft-empty");
+  const draftTotal = document.getElementById("budget-draft-total");
+  const builderError = document.getElementById("budget-builder-error");
+  const budgetSuccess = document.getElementById("budget-success");
+  const budgetsLoading = document.getElementById("budgets-loading");
+  const budgetsError = document.getElementById("budgets-error");
+  const pendingEmpty = document.getElementById("pending-budgets-empty");
+  const pendingTable = document.getElementById("pending-budgets-table");
+  const pendingBody = document.getElementById("pending-budgets-list");
+  const historyEmpty = document.getElementById("budget-history-empty");
+  const historyTable = document.getElementById("budget-history-table");
+  const historyBody = document.getElementById("budget-history-list");
+  const pendingCount = document.getElementById("pending-budget-count");
+
+  if (!productSelect || !generateButton || !pendingBody || !historyBody) return;
+
+  let availableProducts = [];
+  let draftItems = [];
+
+  function showBuilderError(message) {
+    builderError.textContent = message;
+    setVisible(builderError, Boolean(message));
+  }
+
+  function showBudgetSuccess(message) {
+    budgetSuccess.textContent = message;
+    setVisible(budgetSuccess, Boolean(message));
+  }
+
+  function selectedProduct() {
+    const id = Number(productSelect.value);
+    return availableProducts.find((product) => product.id === id) ?? null;
+  }
+
+  function syncProductSelection() {
+    const product = selectedProduct();
+    if (!product) {
+      quantityInput.removeAttribute("max");
+      stockHelp.textContent = "Seleccioná un producto para ver el stock disponible.";
+      return;
+    }
+    quantityInput.max = String(product.stock);
+    stockHelp.textContent = `Stock disponible: ${product.stock} unidades. Precio: ${formatPrice(product.price)}.`;
+    if (!quantityInput.value || Number(quantityInput.value) < 1) quantityInput.value = "1";
+  }
+
+  async function loadBudgetProducts() {
+    const products = await getProducts();
+    availableProducts = products;
+    const previousValue = productSelect.value;
+    productSelect.replaceChildren();
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = products.some((product) => product.stock > 0)
+      ? "Seleccioná un producto"
+      : "No hay productos con stock disponible";
+    productSelect.appendChild(placeholder);
+
+    for (const product of products) {
+      const option = document.createElement("option");
+      option.value = String(product.id);
+      option.textContent = `${product.name} — ${formatPrice(product.price)} — stock: ${product.stock}`;
+      option.disabled = product.stock <= 0;
+      productSelect.appendChild(option);
+    }
+
+    if (previousValue && products.some((product) => product.id === Number(previousValue) && product.stock > 0)) {
+      productSelect.value = previousValue;
+    }
+    productSelect.disabled = !products.some((product) => product.stock > 0);
+    addItemButton.disabled = productSelect.disabled;
+    syncProductSelection();
+
+    // Si el stock cambió mientras el usuario armaba el borrador, mantenemos
+    // la cantidad escrita solo cuando todavía puede reservarse.
+    let stockChanged = false;
+    for (const item of draftItems) {
+      const latest = products.find((product) => product.id === item.productId);
+      item.availableStock = latest?.stock ?? 0;
+      if (latest) item.product = latest;
+      if (item.availableStock < item.quantity) stockChanged = true;
+    }
+    renderDraft();
+    if (stockChanged) {
+      showBuilderError("El stock disponible cambió desde que agregaste un producto. Ajustá la cantidad o quitá la línea antes de generar el presupuesto.");
+    }
+  }
+
+  function renderDraft() {
+    draftBody.replaceChildren();
+    let totalCents = 0n;
+    let hasInvalidAmount = false;
+
+    for (const item of draftItems) {
+      const row = document.createElement("tr");
+      const priceCents = priceTextToCents(item.product.price);
+      const lineTotal = priceCents * BigInt(item.quantity);
+      totalCents += lineTotal;
+
+      row.appendChild(createTextCell(item.product.name));
+      row.appendChild(createTextCell(formatPrice(item.product.price)));
+
+      const quantityCell = document.createElement("td");
+      const input = document.createElement("input");
+      input.className = "budget-quantity-input";
+      input.type = "number";
+      input.min = "1";
+      input.max = String(item.availableStock ?? item.product.stock);
+      input.step = "1";
+      input.required = true;
+      input.inputMode = "numeric";
+      input.value = String(item.quantity);
+      input.setAttribute("aria-label", `Cantidad de ${item.product.name}`);
+      input.addEventListener("change", () => {
+        const text = input.value.trim();
+        const quantity = Number(text);
+        if (!/^\d+$/.test(text) || !Number.isSafeInteger(quantity) || quantity < 1) {
+          showBuilderError(`La cantidad de ${item.product.name} debe ser un entero mayor que cero.`);
+          input.value = String(item.quantity);
+          return;
+        }
+        if (quantity > (item.availableStock ?? item.product.stock)) {
+          showBuilderError(`Solo hay ${item.availableStock ?? item.product.stock} unidades disponibles de ${item.product.name}.`);
+          input.value = String(item.quantity);
+          return;
+        }
+        item.quantity = quantity;
+        showBuilderError("");
+        renderDraft();
+      });
+      quantityCell.appendChild(input);
+      row.appendChild(quantityCell);
+      row.appendChild(createTextCell(formatCentsAsPrice(lineTotal)));
+
+      const actionCell = document.createElement("td");
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "button button--danger button--table";
+      removeButton.textContent = "Quitar";
+      removeButton.setAttribute("aria-label", `Quitar ${item.product.name} del presupuesto`);
+      removeButton.addEventListener("click", () => {
+        draftItems = draftItems.filter((draftItem) => draftItem.productId !== item.productId);
+        showBuilderError("");
+        renderDraft();
+      });
+      actionCell.appendChild(removeButton);
+      row.appendChild(actionCell);
+      draftBody.appendChild(row);
+
+      if (lineTotal > maximumSafeInteger || totalCents > maximumSafeInteger || item.quantity > (item.availableStock ?? item.product.stock)) {
+        hasInvalidAmount = true;
+      }
+    }
+
+    const hasItems = draftItems.length > 0;
+    setVisible(draftTable, hasItems);
+    setVisible(draftEmpty, !hasItems);
+    draftTotal.textContent = totalCents <= maximumSafeInteger
+      ? formatCentsAsPrice(totalCents)
+      : "Importe fuera de rango";
+    generateButton.disabled = !hasItems || hasInvalidAmount;
+    if (hasInvalidAmount) showBuilderError("El importe total supera el máximo admitido. Reducí las cantidades.");
+  }
+
+  function appendStatusBadge(status) {
+    const badge = document.createElement("span");
+    badge.className = `budget-status budget-status--${status}`;
+    badge.textContent = status === "paid" ? "Pagado" : status === "rejected" ? "Rechazado" : "Pendiente";
+    return badge;
+  }
+
+  async function handleResolution(budget, status, button) {
+    const isPaid = status === "paid";
+    const message = isPaid
+      ? `¿Confirmás que el presupuesto #${String(budget.id).padStart(5, "0")} fue pagado? El stock reservado no se devolverá.`
+      : `¿Confirmás que el presupuesto #${String(budget.id).padStart(5, "0")} fue rechazado? Se devolverán las unidades reservadas al inventario.`;
+    if (!window.confirm(message)) return;
+
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = "Procesando…";
+    setVisible(budgetsError, false);
+    try {
+      await resolveBudget(budget.id, status);
+      await loadBudgets();
+      await loadBudgetProducts();
+      await refreshInventory();
+      await refreshSummary();
+    } catch (error) {
+      budgetsError.textContent = error instanceof Error && error.message
+        ? error.message
+        : "No se pudo actualizar el presupuesto. Intentá nuevamente.";
+      setVisible(budgetsError, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+  }
+
+  async function loadBudgets() {
+    setVisible(budgetsLoading, true);
+    setVisible(budgetsError, false);
+    try {
+      const budgets = await getBudgets();
+      const pending = budgets.filter((budget) => budget.status === "pending");
+      const history = budgets.filter((budget) => budget.status === "paid" || budget.status === "rejected");
+      pendingBody.replaceChildren();
+      historyBody.replaceChildren();
+      pendingCount.textContent = `${pending.length} ${pending.length === 1 ? "pendiente" : "pendientes"}`;
+
+      for (const budget of pending) {
+        const row = document.createElement("tr");
+        row.appendChild(createTextCell(`#${String(budget.id).padStart(5, "0")}`));
+        row.appendChild(createTextCell(formatBudgetDate(budget.createdAt)));
+        row.appendChild(createTextCell(`${budget.items.length} productos · ${budget.items.reduce((sum, item) => sum + item.quantity, 0)} unidades`));
+        row.appendChild(createTextCell(formatPrice(budget.total)));
+        const actionsCell = document.createElement("td");
+        const actions = document.createElement("div");
+        actions.className = "budget-inline-actions";
+        actions.appendChild(createBudgetPdfLink(budget.id));
+
+        const paidButton = document.createElement("button");
+        paidButton.type = "button";
+        paidButton.className = "button button--primary";
+        paidButton.textContent = "Pagado";
+        paidButton.addEventListener("click", () => handleResolution(budget, "paid", paidButton));
+
+        const rejectedButton = document.createElement("button");
+        rejectedButton.type = "button";
+        rejectedButton.className = "button button--danger";
+        rejectedButton.textContent = "Rechazado";
+        rejectedButton.addEventListener("click", () => handleResolution(budget, "rejected", rejectedButton));
+        actions.append(paidButton, rejectedButton);
+        actionsCell.appendChild(actions);
+        row.appendChild(actionsCell);
+        pendingBody.appendChild(row);
+      }
+
+      for (const budget of history) {
+        const row = document.createElement("tr");
+        row.appendChild(createTextCell(`#${String(budget.id).padStart(5, "0")}`));
+        row.appendChild(createTextCell(formatBudgetDate(budget.createdAt)));
+        const statusCell = document.createElement("td");
+        statusCell.appendChild(appendStatusBadge(budget.status));
+        row.appendChild(statusCell);
+        row.appendChild(createTextCell(formatPrice(budget.total)));
+        const pdfCell = document.createElement("td");
+        pdfCell.appendChild(createBudgetPdfLink(budget.id));
+        row.appendChild(pdfCell);
+        historyBody.appendChild(row);
+      }
+
+      setVisible(pendingEmpty, pending.length === 0);
+      setVisible(pendingTable, pending.length > 0);
+      setVisible(historyEmpty, history.length === 0);
+      setVisible(historyTable, history.length > 0);
+      return true;
+    } catch (error) {
+      budgetsError.textContent = error instanceof Error && error.message
+        ? error.message
+        : "No se pudieron cargar los presupuestos. Intentá nuevamente.";
+      setVisible(budgetsError, true);
+      return false;
+    } finally {
+      setVisible(budgetsLoading, false);
+    }
+  }
+
+  productSelect.addEventListener("change", syncProductSelection);
+
+  addItemButton.addEventListener("click", () => {
+    showBuilderError("");
+    const product = selectedProduct();
+    if (!product) {
+      showBuilderError("Seleccioná un producto del listado.");
+      productSelect.focus();
+      return;
+    }
+    const quantityText = quantityInput.value.trim();
+    const quantity = Number(quantityText);
+    if (!/^\d+$/.test(quantityText) || !Number.isSafeInteger(quantity) || quantity <= 0) {
+      showBuilderError("La cantidad debe ser un número entero mayor que cero.");
+      quantityInput.focus();
+      return;
+    }
+    if (quantity > product.stock) {
+      showBuilderError(`No hay stock suficiente de ${product.name}. Disponible: ${product.stock} unidades.`);
+      quantityInput.focus();
+      return;
+    }
+    if (draftItems.some((item) => item.productId === product.id)) {
+      showBuilderError(`Ya agregaste ${product.name}. Cambiá su cantidad directamente en el detalle.`);
+      return;
+    }
+    if (draftItems.length >= 50) {
+      showBuilderError("Un presupuesto puede contener como máximo 50 productos diferentes.");
+      return;
+    }
+    draftItems.push({ productId: product.id, quantity, product, availableStock: product.stock });
+    renderDraft();
+    productSelect.value = "";
+    quantityInput.value = "1";
+    syncProductSelection();
+  });
+
+  generateButton.addEventListener("click", async () => {
+    showBuilderError("");
+    showBudgetSuccess("");
+    if (draftItems.length === 0) {
+      showBuilderError("Agregá al menos un producto para generar el presupuesto.");
+      return;
+    }
+
+    generateButton.disabled = true;
+    const originalLabel = generateButton.textContent;
+    generateButton.textContent = "Generando presupuesto…";
+    try {
+      const budget = await createBudget({
+        items: draftItems.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+      });
+      draftItems = [];
+      renderDraft();
+      let pdfDownloaded = false;
+      try {
+        const { blob, filename } = await getBudgetPdf(budget.id);
+        const objectUrl = URL.createObjectURL(blob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = objectUrl;
+        downloadLink.download = filename;
+        downloadLink.hidden = true;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        downloadLink.remove();
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        pdfDownloaded = true;
+      } catch {
+        // El presupuesto y la reserva ya se confirmaron. El PDF sigue disponible
+        // desde el enlace de descarga que aparece en el listado.
+      }
+
+      const refreshed = await loadBudgets();
+      await loadBudgetProducts();
+      await refreshInventory();
+      await refreshSummary();
+      showBudgetSuccess(
+        `Se generó el presupuesto #${String(budget.id).padStart(5, "0")}${pdfDownloaded ? " y se descargó el PDF." : ". Podés descargar el PDF desde el listado de pendientes."}`,
+      );
+      if (!refreshed) showBudgetSuccess(`El presupuesto #${budget.id} se generó, pero no se pudo actualizar el listado.`);
+    } catch (error) {
+      showBuilderError(error instanceof Error && error.message
+        ? error.message
+        : "No se pudo generar el presupuesto. Revisá los datos e intentá nuevamente.");
+      await loadBudgetProducts();
+    } finally {
+      generateButton.textContent = originalLabel;
+      generateButton.disabled = draftItems.length === 0;
+      renderDraft();
+    }
+  });
+
+  loadBudgetProducts().catch((error) => {
+    showBuilderError(error instanceof Error && error.message
+      ? error.message
+      : "No se pudieron cargar los productos para presupuestar.");
+    productSelect.disabled = true;
+    addItemButton.disabled = true;
+  });
+  loadBudgets();
+  return {
+    async refresh() {
+      await Promise.all([
+        loadBudgets(),
+        loadBudgetProducts().catch((error) => {
+          showBuilderError(error instanceof Error && error.message
+            ? error.message
+            : "No se pudo actualizar el stock para presupuestar.");
+        }),
+        refreshInventory(),
+        refreshSummary(),
+      ]);
+    },
+  };
+}
+
 function initializeInventoryPage() {
   const createPanel = document.getElementById("create-product-panel");
   const createForm = document.getElementById("create-product-form");
@@ -323,26 +743,19 @@ function initializeInventoryPage() {
   const filterForm = document.getElementById("filter-form");
   const searchInput = document.getElementById("search-products");
   const categoryFilter = document.getElementById("category-filter");
-  const clearFiltersButton = document.getElementById("clear-filters");
   const editPanel = document.getElementById("edit-product-panel");
   const editForm = document.getElementById("edit-product-form");
   const cancelEditButton = document.getElementById("cancel-edit-product");
   const submitEditButton = document.getElementById("submit-edit-product");
-  const stockPanel = document.getElementById("stock-adjustment-panel");
-  const stockForm = document.getElementById("stock-adjustment-form");
-  const cancelStockButton = document.getElementById("cancel-stock-adjustment");
-  const submitStockButton = document.getElementById("submit-stock-adjustment");
   const backdrop = document.getElementById("modal-backdrop");
   let editTrigger = null;
-  let stockTrigger = null;
   let editingProductId = null;
-  let adjustingProduct = null;
   let activePanel = null;
   let lastFilterKey = null;
   let pendingFilterKey = null;
 
   function toggleModal(openPanel) {
-    const panels = [createPanel, editPanel, stockPanel];
+    const panels = [createPanel, editPanel];
     for (const panel of panels) {
       setVisible(panel, panel === openPanel);
       panel.setAttribute("aria-hidden", panel === openPanel ? "false" : "true");
@@ -360,7 +773,6 @@ function initializeInventoryPage() {
     const previousPanel = activePanel;
     toggleModal(null);
     if (previousPanel === editPanel && editTrigger?.focus) editTrigger.focus();
-    else if (previousPanel === stockPanel && stockTrigger?.focus) stockTrigger.focus();
     else openButton.focus();
   }
 
@@ -379,7 +791,7 @@ function initializeInventoryPage() {
     if (filterKey === lastFilterKey || filterKey === pendingFilterKey) return;
     pendingFilterKey = filterKey;
     lastFilterKey = null;
-    loadInventory(showEditForm, showStockAdjustmentForm, removeProduct, filters).then((refreshed) => {
+    loadInventory(showEditForm, removeProduct, filters).then((refreshed) => {
       if (pendingFilterKey !== filterKey) return;
       pendingFilterKey = null;
       if (refreshed) lastFilterKey = filterKey;
@@ -401,7 +813,7 @@ function initializeInventoryPage() {
 
     try {
       await deleteProduct(product.id);
-      const refreshed = await loadInventory(showEditForm, showStockAdjustmentForm, removeProduct, currentFilters(), true);
+      const refreshed = await loadInventory(showEditForm, removeProduct, currentFilters(), true);
       await loadSummary();
       successState.textContent = refreshed
         ? `Se eliminó el producto ${product.name}.`
@@ -428,6 +840,7 @@ function initializeInventoryPage() {
     editForm.elements.name.value = product.name;
     editForm.elements.description.value = product.description || "";
     editForm.elements.price.value = product.price;
+    editForm.elements.stock.value = String(product.stock);
 
     const categorySelect = document.getElementById("edit-product-category-select");
     const categoryInput = document.getElementById("edit-product-category-custom");
@@ -443,19 +856,6 @@ function initializeInventoryPage() {
     editForm.elements.name.focus();
   }
 
-  function showStockAdjustmentForm(product, trigger) {
-    stockTrigger = trigger;
-    adjustingProduct = product;
-    toggleModal(stockPanel);
-    setVisible(successState, false);
-    setAdjustmentFormError("");
-    stockForm.reset();
-    stockForm.elements.operation.value = "increase";
-    stockForm.elements.quantity.value = "";
-    document.getElementById("stock-adjustment-title").textContent = `Ajustar stock: ${product.name}`;
-    document.getElementById("stock-adjustment-current").textContent = `Stock actual: ${product.stock} unidades`;
-    stockForm.elements.operation.focus();
-  }
 
   function openCreateModal() {
     toggleModal(createPanel);
@@ -480,11 +880,6 @@ function initializeInventoryPage() {
 
   cancelEditButton.addEventListener("click", () => {
     resetForm(editForm, setEditFormError);
-    closeCurrentModal();
-  });
-
-  cancelStockButton.addEventListener("click", () => {
-    resetForm(stockForm, setAdjustmentFormError);
     closeCurrentModal();
   });
 
@@ -549,7 +944,7 @@ function initializeInventoryPage() {
       const createdProduct = await createProduct(payload);
       resetForm(createForm);
       toggleModal(null);
-      const refreshed = await loadInventory(showEditForm, showStockAdjustmentForm, removeProduct, currentFilters(), true);
+      const refreshed = await loadInventory(showEditForm, removeProduct, currentFilters(), true);
       await loadSummary();
       successState.textContent = refreshed
         ? `Se registró el producto ${createdProduct.name}.`
@@ -574,8 +969,9 @@ function initializeInventoryPage() {
       description: editForm.elements.description.value,
       category: resolveCategoryValue(editForm, "category", "category-select"),
       price: editForm.elements.price.value.trim(),
+      stockText: editForm.elements.stock.value.trim(),
     };
-    const validationMessage = validateProductData(product);
+    const validationMessage = validateProductData(product, { includeStock: true });
     if (validationMessage) {
       setEditFormError(validationMessage);
       return;
@@ -586,10 +982,16 @@ function initializeInventoryPage() {
     submitEditButton.textContent = "Guardando…";
 
     try {
-      const updatedProduct = await updateProduct(editingProductId, product);
+      const updatedProduct = await updateProduct(editingProductId, {
+        name: product.name,
+        description: product.description,
+        category: product.category,
+        price: product.price,
+        stock: Number(product.stockText),
+      });
       resetForm(editForm, setEditFormError);
       toggleModal(null);
-      const refreshed = await loadInventory(showEditForm, showStockAdjustmentForm, removeProduct, currentFilters(), true);
+      const refreshed = await loadInventory(showEditForm, removeProduct, currentFilters(), true);
       await loadSummary();
       successState.textContent = refreshed
         ? `Se actualizó el producto ${updatedProduct.name}.`
@@ -604,59 +1006,22 @@ function initializeInventoryPage() {
     }
   });
 
-  stockForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    setAdjustmentFormError("");
-    setVisible(successState, false);
 
-    const operation = stockForm.elements.operation.value;
-    const quantityText = stockForm.elements.quantity.value.trim();
-    if (!["increase", "decrease"].includes(operation)) {
-      setAdjustmentFormError("Seleccioná una operación válida.");
-      return;
-    }
-    if (!/^\d+$/.test(quantityText)) {
-      setAdjustmentFormError("La cantidad debe ser un número entero mayor que cero.");
-      return;
-    }
-    const quantity = Number(quantityText);
-    if (!Number.isSafeInteger(quantity) || quantity <= 0) {
-      setAdjustmentFormError("La cantidad debe ser un número entero positivo dentro del rango admitido.");
-      return;
-    }
-
-    submitStockButton.disabled = true;
-    const originalSubmitLabel = submitStockButton.textContent;
-    submitStockButton.textContent = "Aplicando…";
-    try {
-      const updatedProduct = await adjustProductStock(adjustingProduct.id, { operation, quantity });
-      toggleModal(null);
-      const refreshed = await loadInventory(showEditForm, showStockAdjustmentForm, removeProduct, currentFilters(), true);
-      await loadSummary();
-      successState.textContent = refreshed
-        ? `Stock actualizado: ${updatedProduct.name} ahora tiene ${updatedProduct.stock} unidades.`
-        : `El stock de ${updatedProduct.name} se actualizó, pero no se pudo refrescar el listado.`;
-      setVisible(successState, true);
-      openButton.focus();
-    } catch (error) {
-      setAdjustmentFormError(error instanceof Error && error.message ? error.message : genericAdjustErrorMessage);
-    } finally {
-      submitStockButton.disabled = false;
-      submitStockButton.textContent = originalSubmitLabel;
-    }
+  let searchDebounceTimer = null;
+  searchInput.addEventListener("input", () => {
+    if (searchDebounceTimer !== null) clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      searchDebounceTimer = null;
+      applyFilters();
+    }, 220);
   });
-
   filterForm.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (searchDebounceTimer !== null) clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
     applyFilters();
   });
   categoryFilter.addEventListener("change", applyFilters);
-
-  clearFiltersButton.addEventListener("click", () => {
-    searchInput.value = "";
-    categoryFilter.value = "";
-    applyFilters();
-  });
 
   for (const prefix of ["product", "edit-product"]) {
     const select = document.getElementById(`${prefix}-category-select`);
@@ -671,12 +1036,30 @@ function initializeInventoryPage() {
   const initialFilters = currentFilters();
   const initialFilterKey = `${initialFilters.search}\u0000${initialFilters.category}`;
   pendingFilterKey = initialFilterKey;
-  loadInventory(showEditForm, showStockAdjustmentForm, removeProduct, initialFilters, true).then((refreshed) => {
+  loadInventory(showEditForm, removeProduct, initialFilters, true).then((refreshed) => {
     if (pendingFilterKey !== initialFilterKey) return;
     pendingFilterKey = null;
     if (refreshed) lastFilterKey = initialFilterKey;
   });
   loadSummary();
+  const budgetsPage = initializeBudgetsPage({
+    refreshInventory: () => loadInventory(
+      showEditForm,
+      removeProduct,
+      currentFilters(),
+      true,
+    ),
+    refreshSummary: loadSummary,
+  });
+  const budgetsNavigationLink = document.getElementById("open-budgets-section");
+  const refreshBudgetsAutomatically = () => budgetsPage?.refresh?.();
+  budgetsNavigationLink?.addEventListener("click", refreshBudgetsAutomatically);
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+    window.addEventListener("focus", refreshBudgetsAutomatically);
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refreshBudgetsAutomatically();
+  });
 }
 
 document.addEventListener("DOMContentLoaded", initializeInventoryPage);

@@ -49,13 +49,13 @@ La categoría se guarda como texto en el producto. No habrá una tabla ni una pa
 
 Los precios se expresan en pesos argentinos (ARS), admiten cero o un valor positivo y hasta dos decimales. El backend normaliza el valor para almacenarlo en centavos enteros y evitar errores de precisión de punto flotante en cálculos monetarios.
 
-## D-007 — Edición de producto y ajuste de stock separados
+## D-007 — Edición de producto y stock unificados
 
 **Estado:** adoptada.
 
-La edición normal permite cambiar nombre, descripción, categoría y precio. El stock inicial se define al crear el producto; las modificaciones posteriores se realizan exclusivamente desde la acción específica de ajuste de stock, mediante `PATCH /api/products/:id/stock`. El endpoint `PUT /api/products/:id` ignora el campo `stock` si un cliente antiguo lo envía por error.
+La edición permite cambiar nombre, descripción, categoría, precio y stock disponible desde un único formulario. El stock se valida como entero seguro no negativo y se persiste junto con los datos comerciales mediante `PUT /api/products/:id`. El endpoint histórico `PATCH /api/products/:id/stock` se conserva por compatibilidad, pero ya no se expone como acción independiente en la interfaz.
 
-**Motivo:** separar los cambios del catálogo de los movimientos de inventario, evitar cambios accidentales en cantidades y mantener un único flujo explícito para aumentos y disminuciones.
+**Motivo:** mantener en un solo formulario los datos del producto y su stock disponible, quitar una acción redundante de cada fila y aplicar todas las validaciones antes de guardar.
 
 ## D-008 — Reglas para ajustar stock
 
@@ -133,9 +133,20 @@ Los errores JSON usarán `{ "error": { "code": "...", "message": "...", "fields"
 
 **Estado:** adoptada.
 
-La pantalla principal y el listado se implementan antes que las operaciones de interfaz. No se muestran opciones de alta ni acciones por producto hasta que su flujo correspondiente esté implementado y pueda operarse. T-14 depende de T-13 e integrará el alta con la pantalla existente; las acciones de edición, eliminación y ajuste de stock se incorporarán con sus respectivas tareas.
+La pantalla principal y el listado se implementan antes que las operaciones de interfaz. No se muestran opciones de alta ni acciones por producto hasta que su flujo correspondiente esté implementado y pueda operarse. T-14 depende de T-13 e integrará el alta con la pantalla existente; las acciones de edición y eliminación, incluida la edición del stock dentro del formulario del producto, se incorporarán con sus respectivas tareas.
 
 **Motivo:** evitar controles sin comportamiento y mantener una secuencia comprobable sin adelantar funcionalidades de tareas posteriores.
+
+
+## D-018 — Presupuestos con reserva de stock y estados
+
+**Estado:** adoptada.
+
+Al crear un presupuesto se reserva inmediatamente el stock dentro de una transacción SQLite, junto con el presupuesto y sus líneas. Los datos históricos (nombre de producto, precio unitario, cantidad y subtotal) se guardan como fotografía independiente del catálogo. El PDF se genera desde esos datos persistidos, no desde el navegador.
+
+Los presupuestos nuevos quedan `pending`. Al resolver como `paid`, el presupuesto desaparece de pendientes y permanece en el historial; no se modifica el stock porque ya fue descontado al crear la reserva. Al resolver como `rejected`, se devuelven las cantidades reservadas y se mueve el presupuesto al historial. Las transiciones solo se pueden realizar una vez. Un producto con reservas pendientes no se puede eliminar.
+
+**Motivo:** impedir sobreventa, evitar que una misma reserva se devuelva dos veces y preservar el documento comercial emitido aunque el catálogo cambie.
 
 ## Historial de cambios
 
@@ -143,4 +154,5 @@ La pantalla principal y el listado se implementan antes que las operaciones de i
 - [cambio] 2026-10-28 — D-015 fija el precio decimal como texto en solicitudes y respuestas JSON para preservar centavos con precisión.
 - [cambio] 2026-10-28 — D-016 adopta el DTO de producto sin `lowStock` y el formato/códigos comunes de error de la API.
 - [cambio] 2026-10-28 — D-017 establece la implementación incremental de la interfaz y evita presentar acciones todavía no operativas.
-- [cambio] 2026-11-02 — Se confirma que las categorías son reutilizables y se canonicalizan; se separa la edición comercial del ajuste de stock para evitar mutaciones accidentales.
+- [cambio] 2026-11-02 — D-018 adopta el flujo de presupuestos con reserva, PDF e historial de estados pagado/rechazado.
+- [cambio] 2026-11-02 — Se confirma que las categorías son reutilizables y se canonicalizan; se integra la edición del stock disponible en el formulario de edición del producto y se retira la acción independiente de la interfaz.

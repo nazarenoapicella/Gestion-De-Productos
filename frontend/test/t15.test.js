@@ -343,8 +343,7 @@ function findEditControl(dom) {
 function editForm(dom) {
   return dom.document.querySelectorAll('form').find((form) =>
     isVisible(form) &&
-    ['name', 'description', 'category', 'price'].every((name) => form.elements[name]) &&
-    !form.elements.stock
+    ['name', 'description', 'category', 'price', 'stock'].every((name) => form.elements[name])
   );
 }
 
@@ -359,7 +358,7 @@ function openEditForm(dom) {
   assert.ok(control, 'Cada producto debe ofrecer una acción operable para editarlo');
   control.click();
   const form = editForm(dom);
-  assert.ok(form, 'Al seleccionar un producto debe abrirse el formulario de edición sin stock');
+  assert.ok(form, 'Al seleccionar un producto debe abrirse el formulario de edición con stock');
   return form;
 }
 
@@ -368,6 +367,7 @@ function changeProduct(form) {
   field(form, 'description').value = 'Mouse inalámbrico';
   field(form, 'category').value = 'Periféricos';
   field(form, 'price').value = '1500.00';
+  field(form, 'stock').value = '5';
 }
 
 function submitForm(form) {
@@ -426,7 +426,7 @@ test('el harness ejecuta la pantalla y representa el producto recibido por GET',
   ]);
 });
 
-test('la API actualiza por PUT el ID elegido y envía solo los cuatro campos editables', async () => {
+test('la API actualiza por PUT el ID elegido e incluye el stock', async () => {
   const calls = [];
   const api = createApi(async (url, options) => {
     calls.push({ url, options });
@@ -438,7 +438,8 @@ test('la API actualiza por PUT el ID elegido y envía solo los cuatro campos edi
     name: 'Mouse Pro',
     description: 'Mouse inalámbrico',
     category: 'Periféricos',
-    price: '1500.00'
+    price: '1500.00',
+    stock: 8
   });
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, '/api/products/42');
@@ -448,9 +449,10 @@ test('la API actualiza por PUT el ID elegido y envía solo los cuatro campos edi
     name: 'Mouse Pro',
     description: 'Mouse inalámbrico',
     category: 'Periféricos',
-    price: '1500.00'
+    price: '1500.00',
+    stock: 8
   });
-  assert.equal(Object.hasOwn(JSON.parse(calls[0].options.body), 'stock'), false);
+  assert.equal(JSON.parse(calls[0].options.body).stock, 8);
 });
 
 test('la API comunica un 404 como producto no encontrado', async () => {
@@ -461,7 +463,7 @@ test('la API comunica un 404 como producto no encontrado', async () => {
   }));
   assert.equal(typeof api.updateProduct, 'function', 'api.js debe exponer updateProduct');
   await assert.rejects(
-    api.updateProduct(42, { name: 'Mouse Pro', description: '', category: 'Periféricos', price: '1500.00' }),
+    api.updateProduct(42, { name: 'Mouse Pro', description: '', category: 'Periféricos', price: '1500.00', stock: 5 }),
     /no encontrado|no existe/i
   );
 });
@@ -476,22 +478,22 @@ test('la API conserva el mensaje VALIDATION_ERROR de un 400', async () => {
   }));
   assert.equal(typeof api.updateProduct, 'function', 'api.js debe exponer updateProduct');
   await assert.rejects(
-    api.updateProduct(42, { name: '', description: '', category: 'Periféricos', price: '-1' }),
+    api.updateProduct(42, { name: '', description: '', category: 'Periféricos', price: '-1', stock: 5 }),
     /El precio no es válido/
   );
 });
 
-test('seleccionar Mouse carga los valores actuales en un formulario sin campo stock', async () => {
+test('seleccionar Mouse carga los valores actuales, incluido el stock, en el formulario', async () => {
   const { dom } = await runScreen();
   const form = openEditForm(dom);
   assert.equal(field(form, 'name').value, 'Mouse');
   assert.equal(field(form, 'description').value, 'Mouse óptico');
   assert.equal(field(form, 'category').value, 'Periféricos');
   assert.equal(field(form, 'price').value, '1000.00');
-  assert.equal(form.elements.stock, undefined);
+  assert.equal(field(form, 'stock').value, '5');
 });
 
-test('guardar Mouse Pro por PUT actualiza el listado y conserva stock 5', async () => {
+test('guardar Mouse Pro por PUT actualiza el listado y puede actualizar stock', async () => {
   const { dom, requests } = await runScreen();
   const form = openEditForm(dom);
   changeProduct(form);
@@ -505,9 +507,10 @@ test('guardar Mouse Pro por PUT actualiza el listado y conserva stock 5', async 
     name: 'Mouse Pro',
     description: 'Mouse inalámbrico',
     category: 'Periféricos',
-    price: '1500.00'
+    price: '1500.00',
+    stock: 5
   });
-  assert.equal(Object.hasOwn(JSON.parse(put.options.body), 'stock'), false);
+  assert.equal(JSON.parse(put.options.body).stock, 5);
   assert.deepEqual(tableRows(dom).map((row) => rowValues(row).slice(0, 4)), [
     ['Mouse Pro', 'Periféricos', '$ 1.500,00', '5']
   ]);

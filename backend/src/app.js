@@ -17,6 +17,14 @@ const summaryRepository = require("./repositories/summary.repository");
 const { getSummary: getSummaryService } = require("./services/summary.service");
 const { createProductsRouter } = require("./routes/products.routes");
 const { createSummaryRouter } = require("./routes/summary.routes");
+const budgetsRepository = require("./repositories/budgets.repository");
+const {
+  createBudget: createBudgetService,
+  listBudgets: listBudgetsService,
+  getBudget: getBudgetService,
+  resolveBudget: resolveBudgetService,
+} = require("./services/budgets.service");
+const { createBudgetsRouter } = require("./routes/budgets.routes");
 
 function createProductsService(database) {
   const repository = {
@@ -62,6 +70,38 @@ function createProductsService(database) {
   };
 }
 
+function createBudgetsService(database) {
+  const repository = {
+    createBudget(items) {
+      return budgetsRepository.createBudget(database, items);
+    },
+    listBudgets() {
+      return budgetsRepository.listBudgets(database);
+    },
+    getBudget(id) {
+      return budgetsRepository.getBudget(database, id);
+    },
+    resolveBudget(id, status) {
+      return budgetsRepository.resolveBudget(database, id, status);
+    },
+  };
+
+  return {
+    createBudget(input) {
+      return createBudgetService(repository, input);
+    },
+    listBudgets() {
+      return listBudgetsService(repository);
+    },
+    getBudget(id) {
+      return getBudgetService(repository, id);
+    },
+    resolveBudget(id, input) {
+      return resolveBudgetService(repository, id, input);
+    },
+  };
+}
+
 function createSummaryService(database) {
   const repository = {
     getSummary() {
@@ -87,6 +127,8 @@ function errorHandler(error, request, response, next) {
     ["VALIDATION_ERROR", "INSUFFICIENT_STOCK"].includes(error.code);
   const isInvalidJson = error.type === "entity.parse.failed";
   const isPayloadTooLarge = error.type === "entity.too.large";
+  const isDomainConflict = Number.isInteger(error.statusCode) &&
+    typeof error.code === "string" && error.statusCode >= 400 && error.statusCode < 500;
 
   if (error instanceof ValidationError || isInvalidStockAdjustment || isInvalidJson) {
     response.status(400).json({
@@ -95,6 +137,16 @@ function errorHandler(error, request, response, next) {
         message: isInvalidJson
           ? "El cuerpo de la solicitud debe contener JSON válido."
           : error.message,
+      },
+    });
+    return;
+  }
+
+  if (isDomainConflict) {
+    response.status(error.statusCode).json({
+      error: {
+        code: error.code,
+        message: error.message,
       },
     });
     return;
@@ -145,6 +197,7 @@ function createApp({ database, productsService } = {}) {
   app.use("/api/products", createProductsRouter(service));
   if (database) {
     app.use("/api/summary", createSummaryRouter(createSummaryService(database)));
+    app.use("/api/budgets", createBudgetsRouter(createBudgetsService(database)));
   }
   app.use("/api", (request, response) => {
     response.status(404).json({

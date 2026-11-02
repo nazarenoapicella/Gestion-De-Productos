@@ -11,7 +11,7 @@
     "db:init": "node --env-file-if-exists=.env src/db",
     "start": "node --env-file-if-exists=.env src/server.js",
     "test": "node --test",
-    "test:frontend": "node --test ../frontend/test/t13.test.js ../frontend/test/t14.test.js ../frontend/test/t15.test.js ../frontend/test/t16.test.js ../frontend/test/t17.test.js ../frontend/test/t18.test.js ../frontend/test/t19.test.js",
+    "test:frontend": "node --test ../frontend/test/t13.test.js ../frontend/test/t14.test.js ../frontend/test/t15.test.js ../frontend/test/t16.test.js ../frontend/test/t17.test.js ../frontend/test/t18.test.js ../frontend/test/t19.test.js ../frontend/test/t20.budgets.test.js",
     "test:all": "npm test && npm run test:frontend"
   },
   "dependencies": {

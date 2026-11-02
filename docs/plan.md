@@ -151,7 +151,7 @@ La comunicación será una API REST con JSON bajo `/api`. Express servirá tambi
 | `GET /api/products` | Listar productos; admite `search` y `category` opcionales. | `200` y una lista de productos. |
 | `GET /api/products/:id` | Consultar un producto. | `200` y el producto, o `404` si no existe. |
 | `POST /api/products` | Crear un producto con nombre, categoría, precio, stock inicial y descripción opcional. | `201` y el producto creado. |
-| `PUT /api/products/:id` | Modificar nombre, descripción, categoría y precio. Nombre, categoría y precio son obligatorios; descripción puede omitirse para conservarla. No modifica stock. | `200` y el producto actualizado, `400` por datos inválidos o `404`. |
+| `PUT /api/products/:id` | Modificar nombre, descripción, categoría, precio y stock disponible. Nombre, categoría, precio y stock son obligatorios; descripción puede omitirse para conservarla. | `200` y el producto actualizado, `400` por datos inválidos o `404`. |
 | `DELETE /api/products/:id` | Eliminar el producto indicado. | `204` sin cuerpo, o `404`. |
 | `PATCH /api/products/:id/stock` | Aumentar o disminuir stock con `operation` y `quantity`. | `200` y el producto actualizado, o un error controlado. |
 | `GET /api/summary` | Obtener los indicadores del inventario. | `200` con los tres indicadores. |
@@ -178,7 +178,7 @@ La regla se define funcionalmente en `docs/spec.md`; su implementación principa
 | RN-02 — Categoría obligatoria y reutilizable | `products.service` | Frontend indica el campo requerido; SQLite aplica restricciones de longitud y no nulidad. Las categorías equivalentes se canonicalizan, no se rechazan. |
 | RN-03 — Precio válido, no negativo y con hasta dos decimales | `products.service` | Frontend ayuda con el formato; SQLite garantiza `price_cents >= 0`. |
 | RN-04 — Stock entero y no negativo | `products.service` | Frontend valida el formulario; SQLite garantiza `stock >= 0`. |
-| RN-05 — La edición normal no modifica stock | `products.service`, con lista explícita de campos editables | Repository actualiza únicamente nombre, descripción, categoría y precio. |
+| RN-05 — El stock se modifica desde el formulario de edición | `products.service`, con lista explícita de campos editables | Repository actualiza nombre, descripción, categoría, precio y stock validado en una única operación. |
 | RN-06 — Aumento del stock | `products.service` coordina la operación | Repository ejecuta una actualización atómica y parametrizada. |
 | RN-07 — Disminución del stock sin quedar negativo | `products.service` valida la cantidad y comunica el resultado | Repository ejecuta una actualización condicional que solo resta si hay stock suficiente. |
 | RN-08 — Stock bajo si `stock <= 5` | Constante única en el dominio/service | API expone el indicador calculado; interfaz lo presenta sin redefinir el umbral. |

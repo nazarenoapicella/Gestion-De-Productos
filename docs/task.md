@@ -51,7 +51,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 
 - [x] **T-03 — Implementar validación y normalización de productos**
   - **Agente:** Backend.
-  - **Qué hace:** centralizar en el servicio las reglas de creación y edición: campos obligatorios, recorte de espacios, límites de longitud, precio en ARS y stock inicial. La edición solo cambia nombre, descripción, categoría y precio; no el stock.
+  - **Qué hace:** centralizar en el servicio las reglas de creación y edición: campos obligatorios, recorte de espacios, límites de longitud, precio en ARS y stock inicial. La edición cambia nombre, descripción, categoría, precio y stock; el stock se valida como entero no negativo.
   - **Archivos previstos:** `backend/src/services/products.service.js` y pruebas del servicio.
   - **RN / HU:** RN-01, RN-02, RN-03, RN-04, RN-05, RN-18; HU-02 y HU-03.
   - **Depende de:** T-02.
@@ -61,7 +61,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     3. Se aceptan los precios textuales `"0"` y `"1250.50"`; se rechazan `"-1"`, `"abc"` y `"1250.505"`.
     4. Se aceptan nombres de 100 caracteres, descripciones de 500 caracteres y categorías de 50 caracteres; se rechazan, respectivamente, 101, 501 y 51 caracteres.
     5. Se acepta stock inicial `0`; se rechazan `-1`, `1.5` y un valor no numérico.
-    6. Un producto con stock `5` recibe una edición que incluye `stock: 99`; los campos editables cambian, pero el stock continúa en `5`.
+    6. Un producto con stock `5` recibe una edición válida que incluye `stock: 99`; los datos comerciales y el stock quedan actualizados en la misma operación.
     7. Una edición inválida deja sin cambios todos los valores previos del producto.
 
 - [x] **T-04 — Implementar los ajustes de stock en el servicio**
@@ -137,13 +137,13 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 
 - [x] **T-09 — Implementar edición de productos en la API**
   - **Agente:** Backend.
-  - **Qué hace:** implementar `PUT /api/products/:id` para actualizar únicamente nombre, descripción, categoría y precio. La solicitud inválida no puede dejar datos parcialmente modificados.
+  - **Qué hace:** implementar `PUT /api/products/:id` para actualizar nombre, descripción, categoría, precio y stock disponible. La solicitud inválida no puede dejar datos parcialmente modificados.
   - **Archivos previstos:** controller/ruta de productos y pruebas HTTP de actualización.
   - **RN / HU:** RN-01, RN-02, RN-03, RN-05, RN-16, RN-18; HU-03.
   - **Depende de:** T-03 y T-08.
   - **Terminada cuando se compruebe:**
-    1. Un producto con nombre `Mouse`, precio `1000` y stock `5` se actualiza a nombre `Mouse Pro` y precio `1500`; la respuesta `200` refleja los cambios y stock `5`.
-    2. Si la petición incluye además `stock: 99`, la respuesta y la base siguen mostrando stock `5`.
+    1. Un producto con nombre `Mouse`, precio `1000` y stock `5` se actualiza a nombre `Mouse Pro`, precio `1500` y stock `99`; la respuesta `200` refleja los cambios.
+    2. Una petición que omite stock o lo envía inválido se rechaza sin modificar el producto.
     3. Una actualización con categoría formada por espacios responde `400`; nombre, categoría, precio y stock permanecen en sus valores anteriores.
     4. Actualizar `/api/products/999999` responde `404` y no modifica ningún otro registro.
 
@@ -214,13 +214,13 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 
 - [x] **T-15 — Crear la edición de productos**
   - **Agente:** Frontend.
-  - **Qué hace:** permitir seleccionar un producto, cargar los valores actuales y guardar cambios descriptivos/comerciales. No ofrecer un campo de stock en el formulario de edición.
+  - **Qué hace:** permitir seleccionar un producto, cargar los valores actuales y guardar cambios descriptivos/comerciales y de stock desde el mismo formulario.
   - **Archivos previstos:** `frontend/js/app.js`, estructura del formulario y estilos relacionados.
   - **RN / HU:** RN-05, RN-18; HU-03.
   - **Depende de:** T-09 y T-13.
   - **Terminada cuando se compruebe:**
-    1. Editar `Mouse` a `Mouse Pro` y cambiar el precio de `1000` a `1500` muestra los nuevos datos y conserva stock `5`.
-    2. La interfaz de edición no permite cambiar el stock.
+    1. Editar `Mouse` a `Mouse Pro`, cambiar el precio de `1000` a `1500` y actualizar el stock desde el mismo formulario refleja todos los cambios.
+    2. La interfaz solo muestra las acciones Editar y Eliminar en cada fila; el stock se modifica dentro de Editar.
     3. Si la API responde `404`, se informa que el producto ya no existe; si responde error de validación, no se muestran falsamente los cambios como guardados.
   - **Verificación:** `node --test frontend/test/t15.test.js` (8/8), `node --test frontend/test/t13.test.js` (10/10), `node --test frontend/test/t14.test.js` (7/7), `npm --prefix backend test` (108/108), `node --check frontend/js/api.js`, `node --check frontend/js/app.js` y `git diff --check`.
 
@@ -238,7 +238,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 
 - [x] **T-17 — Conectar búsqueda y filtro por categoría**
   - **Agente:** Frontend.
-  - **Qué hace:** añadir búsqueda por nombre, filtro de categoría, combinación de ambas condiciones y acción para limpiar los filtros. Mostrar el estado sin resultados.
+  - **Qué hace:** añadir búsqueda por nombre con filtrado automático mientras se escribe, filtro de categoría y combinación de ambas condiciones. No se requieren botones Buscar ni Limpiar; borrar el texto y seleccionar Todas las categorías restablece el listado.
   - **Archivos previstos:** `frontend/index.html`, `frontend/js/api.js` o `frontend/js/app.js`, estilos de controles.
   - **RN / HU:** RN-12, RN-13, RN-14, RN-15; HU-05.
   - **Depende de:** T-05, T-07 y T-13.
@@ -247,25 +247,25 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     2. Seleccionar `Periféricos` muestra `Mouse inalámbrico` y `Teclado`.
     3. Combinar búsqueda `mouse` y categoría `Accesorios` muestra solo `Mousepad`.
     4. Buscar `router` muestra un estado sin resultados.
-    5. Limpiar los filtros vuelve a mostrar los tres registros.
+    5. Borrar el texto de búsqueda y seleccionar Todas las categorías vuelve a mostrar los tres registros sin botones adicionales.
   - **Verificación:** `node --test frontend/test/t17.test.js` (12/12), `node --test frontend/test/t13.test.js frontend/test/t14.test.js frontend/test/t15.test.js frontend/test/t16.test.js` (30/30), `npm --prefix backend test` (108/108), `node --check frontend/js/api.js`, `node --check frontend/js/app.js`, `node --check frontend/test/t17.test.js` y `git diff --check`.
 
 - [x] **T-18 — Incorporar el ajuste de stock en la interfaz**
   - **Agente:** Frontend.
-  - **Qué hace:** permitir elegir aumentar o disminuir, ingresar una cantidad positiva y ejecutar el endpoint específico. Actualizar el stock visible solo después de una respuesta exitosa.
+  - **Qué hace:** incluir el campo de stock disponible en el formulario de edición de productos y quitar la acción independiente de ajuste de stock en las filas. El endpoint histórico de ajuste se conserva por compatibilidad.
   - **Archivos previstos:** `frontend/js/app.js`, formulario/markup de ajuste y estilos relacionados.
   - **RN / HU:** RN-04, RN-05, RN-06, RN-07, RN-18; HU-06.
   - **Depende de:** T-11 y T-13.
   - **Terminada cuando se compruebe:**
-    1. Un producto con stock `5`, al aumentar `2`, pasa a mostrar stock `7` tras recibir éxito de la API.
-    2. Intentar disminuir `8` cuando el stock es `7` muestra el error y mantiene `7` en pantalla.
-    3. Cantidad `0` o `1.5` se rechaza y no produce un cambio de stock.
+    1. Abrir Editar precarga el stock actual del producto.
+    2. Un stock entero no negativo se guarda junto con los demás campos comerciales.
+    3. Cantidades negativas, decimales o no numéricas se rechazan sin llamar a la API.
     4. Si el servidor falla, la interfaz informa el error y no simula el cambio.
     5. La operación queda cubierto por pruebas frontend y backend ejecutadas y aprobadas: `frontend/test/t18.test.js` y la suite de backend completa.
 
 - [x] **T-19 — Mostrar y actualizar el resumen del inventario**
   - **Agente:** Frontend.
-  - **Qué hace:** mostrar productos registrados, unidades totales y productos con stock bajo a partir de `GET /api/summary`. Actualizar los indicadores después de altas, ediciones, eliminaciones y ajustes exitosos.
+  - **Qué hace:** mostrar productos registrados, unidades totales y productos con stock bajo a partir de `GET /api/summary`. Actualizar los indicadores después de altas, ediciones (incluido el stock), eliminaciones y reservas/devoluciones de presupuestos.
   - **Archivos previstos:** `frontend/js/api.js`, `frontend/js/app.js`, markup y estilos de indicadores.
   - **RN / HU:** RN-08, RN-09, RN-10, RN-11; HU-07.
   - **Depende de:** T-12, T-13, T-14, T-15, T-16 y T-18.
@@ -290,9 +290,9 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
   - **Depende de:** T-01 a T-19.
   - **Terminada cuando se compruebe:**
     1. Crear `Mouse` con precio `1250.50` y stock `5` lo muestra en el listado y produce resumen `1` producto, `5` unidades y `1` producto con stock bajo.
-    2. Aumentar el stock en `2` lo deja en `7` y cambia el resumen a `1`, `7`, `0`.
-    3. Intentar disminuir `8` con stock `7` produce un error; el stock y el resumen no cambian.
-    4. Una edición normal que incluya `stock: 99` no cambia el stock real.
+    2. Editar el producto y establecer el stock en `7` cambia el resumen a `1`, `7`, `0`.
+    3. Intentar guardar un stock negativo o decimal produce un error; el stock y el resumen no cambian.
+    4. Una edición válida que incluya `stock: 99` actualiza el stock real en la misma operación que los demás campos.
     5. Buscar por nombre y categoría combinados devuelve solo la coincidencia esperada; una búsqueda sin coincidencias muestra el estado vacío correspondiente.
     6. Cancelar un borrado conserva el producto; confirmarlo lo elimina y actualiza el resumen.
     7. Tras crear un producto, detener y volver a iniciar el servidor conserva el producto y sus datos.

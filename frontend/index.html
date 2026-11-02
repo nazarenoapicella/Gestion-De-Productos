@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#102a36">
-    <meta name="description" content="Gestioná productos y controlá el stock de tu comercio con Stock Simple.">
+    <meta name="description" content="Gestioná productos, controlá el stock y generá presupuestos para tu comercio con Stock Simple.">
     <title>Inventario | Stock Simple</title>
     <link rel="stylesheet" href="css/styles.css">
     <script type="module" src="js/app.js"></script>
@@ -66,7 +66,7 @@
         <div>
           <p class="eyebrow">Editar registro</p>
           <h2 id="edit-product-title">Editar producto</h2>
-          <p class="form-intro">Actualizá los datos comerciales. El stock se modifica desde su acción específica.</p>
+          <p class="form-intro">Actualizá los datos del producto y las unidades disponibles en inventario.</p>
         </div>
         <span class="modal-step" aria-hidden="true">✎</span>
       </div>
@@ -93,6 +93,11 @@
             </div>
             <small id="edit-price-help">Hasta dos decimales. Ej.: 1500.00.</small>
           </div>
+          <div class="form-field">
+            <label for="edit-product-stock">Stock disponible <span aria-hidden="true">*</span></label>
+            <input id="edit-product-stock" name="stock" type="number" min="0" max="9007199254740991" step="1" required inputmode="numeric" aria-describedby="edit-stock-help">
+            <small id="edit-stock-help">Ingresá un número entero mayor o igual que cero.</small>
+          </div>
           <div class="form-field form-field--wide">
             <label for="edit-product-description">Descripción <span class="optional-label">Opcional</span></label>
             <textarea id="edit-product-description" name="description" maxlength="500" rows="3"></textarea>
@@ -106,38 +111,6 @@
       </form>
     </section>
 
-
-    <section id="stock-adjustment-panel" class="form-panel modal-panel modal-panel--compact" role="dialog" aria-modal="true" aria-labelledby="stock-adjustment-title" hidden>
-      <div class="form-panel__header">
-        <div>
-          <p class="eyebrow">Movimiento de inventario</p>
-          <h2 id="stock-adjustment-title">Ajustar stock</h2>
-          <p id="stock-adjustment-current" class="form-intro">Stock actual: 0 unidades</p>
-        </div>
-        <span class="modal-step" aria-hidden="true">↕</span>
-      </div>
-      <form id="stock-adjustment-form" novalidate>
-        <p id="stock-adjustment-error" class="state-message state-message--error" role="alert" hidden></p>
-        <div class="form-grid form-grid--single">
-          <div class="form-field">
-            <label for="stock-adjustment-operation">Operación <span aria-hidden="true">*</span></label>
-            <select id="stock-adjustment-operation" name="operation" required>
-              <option value="increase">Aumentar stock</option>
-              <option value="decrease">Disminuir stock</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label for="stock-adjustment-quantity">Cantidad de unidades <span aria-hidden="true">*</span></label>
-            <input id="stock-adjustment-quantity" name="quantity" type="number" min="1" max="9007199254740991" step="1" required inputmode="numeric" placeholder="Ej. 5">
-          </div>
-        </div>
-        <p class="required-note">Ingresá un número entero mayor que cero.</p>
-        <div class="form-actions">
-          <button id="submit-stock-adjustment" class="button button--primary" type="submit">Confirmar ajuste</button>
-          <button id="cancel-stock-adjustment" class="button button--secondary" type="button">Cancelar</button>
-        </div>
-      </form>
-    </section>
 
     <main class="page">
       <header class="page-header">
@@ -156,6 +129,11 @@
           </button>
         </div>
       </header>
+
+      <nav class="page-navigation" aria-label="Secciones principales">
+        <a href="#summary-panel">Inventario</a>
+        <a id="open-budgets-section" href="#budgets-panel">Presupuestos</a>
+      </nav>
 
       <section id="summary-panel" class="summary-panel" aria-labelledby="summary-title">
         <div class="section-heading">
@@ -207,16 +185,13 @@
               <span aria-hidden="true">⌕</span>
               <input id="search-products" name="search" type="search" placeholder="Escribí el nombre…" autocomplete="off">
             </div>
+            <small class="filter-live-hint">Los resultados se filtran mientras escribís.</small>
           </div>
           <div class="form-field category-filter-field">
             <label for="category-filter">Categoría</label>
             <select id="category-filter" name="category">
               <option value="">Todas las categorías</option>
             </select>
-          </div>
-          <div class="filter-actions">
-            <button class="button button--primary" type="submit">Buscar</button>
-            <button id="clear-filters" class="button button--secondary" type="button">Limpiar</button>
           </div>
         </form>
 
@@ -229,7 +204,7 @@
         </p>
         <p id="no-results-state" class="state-message state-message--empty" role="status" aria-live="polite" hidden>
           <strong>No se encontraron productos.</strong>
-          <span>Probá con otro nombre o limpiá los filtros para ver todo el inventario.</span>
+          <span>Probá con otro nombre o seleccioná “Todas las categorías”.</span>
         </p>
         <p id="error-state" class="state-message state-message--error" role="alert" hidden></p>
         <p id="delete-error-state" class="state-message state-message--error" role="alert" hidden></p>
@@ -250,6 +225,120 @@
             <tbody id="products-list"></tbody>
           </table>
         </div>
+      </section>
+
+      <section id="budgets-panel" class="budgets-panel" aria-labelledby="budgets-title">
+        <div class="section-heading budgets-heading">
+          <div>
+            <p class="eyebrow">Ventas y reservas</p>
+            <h2 id="budgets-title">Presupuestos</h2>
+            <p class="inventory-description">Armá una propuesta, descargá el PDF y registrá si se concretó la venta.</p>
+          </div>
+        </div>
+
+        <section class="budget-builder" aria-labelledby="budget-builder-title">
+          <div class="budget-builder__heading">
+            <div>
+              <h3 id="budget-builder-title">Crear presupuesto</h3>
+              <p>Elegí un producto, indicá la cantidad y agregalo al detalle.</p>
+            </div>
+            <span class="budget-builder__icon" aria-hidden="true">▤</span>
+          </div>
+          <div class="budget-picker">
+            <div class="form-field">
+              <label for="budget-product-select">Producto <span aria-hidden="true">*</span></label>
+              <select id="budget-product-select" required>
+                <option value="">Cargando productos…</option>
+              </select>
+            </div>
+            <div class="form-field budget-quantity-field">
+              <label for="budget-product-quantity">Cantidad <span aria-hidden="true">*</span></label>
+              <input id="budget-product-quantity" type="number" min="1" step="1" value="1" required inputmode="numeric">
+              <small id="budget-stock-help">Seleccioná un producto para ver el stock disponible.</small>
+            </div>
+            <button id="add-budget-item" class="button button--secondary" type="button">＋ Agregar producto</button>
+          </div>
+          <p id="budget-builder-error" class="state-message state-message--error" role="alert" hidden></p>
+          <p id="budget-success" class="state-message state-message--success" role="status" aria-live="polite" hidden></p>
+
+          <div class="table-scroll budget-draft-scroll">
+            <table id="budget-draft-table" class="budget-table" hidden>
+              <caption>Productos incluidos en el nuevo presupuesto</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Producto</th>
+                  <th scope="col">Precio unitario</th>
+                  <th scope="col">Cantidad</th>
+                  <th scope="col">Subtotal</th>
+                  <th scope="col">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="budget-draft-list"></tbody>
+            </table>
+          </div>
+          <p id="budget-draft-empty" class="budget-draft-empty">Todavía no agregaste productos al presupuesto.</p>
+          <div class="budget-builder__footer">
+            <div>
+              <span class="budget-total-label">Total estimado</span>
+              <strong id="budget-draft-total" class="budget-total">$ 0,00</strong>
+            </div>
+            <button id="generate-budget" class="button button--primary" type="button" disabled>Generar presupuesto y PDF</button>
+          </div>
+          <p class="budget-reservation-note">Al generar el presupuesto, las unidades se reservan y se descuentan del stock. Si el presupuesto se rechaza, el sistema devuelve esas unidades automáticamente.</p>
+        </section>
+
+        <section class="budget-list-section" aria-labelledby="pending-budgets-title">
+          <div class="budget-list-heading">
+            <div>
+              <h3 id="pending-budgets-title">Presupuestos pendientes</h3>
+              <p>Marcá como pagado o rechazado cuando tengas una respuesta.</p>
+            </div>
+            <span id="pending-budget-count" class="budget-count">0 pendientes</span>
+          </div>
+          <p id="budgets-loading" class="state-message state-message--loading" role="status" hidden><span class="loading-indicator" aria-hidden="true"></span> Cargando presupuestos…</p>
+          <p id="budgets-error" class="state-message state-message--error" role="alert" hidden></p>
+          <p id="pending-budgets-empty" class="state-message state-message--empty" role="status">No hay presupuestos pendientes.</p>
+          <div class="table-scroll">
+            <table id="pending-budgets-table" class="budget-table" hidden>
+              <caption>Presupuestos que esperan una respuesta del cliente</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Número</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Productos</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="pending-budgets-list"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="budget-list-section budget-history-section" aria-labelledby="budget-history-title">
+          <div class="budget-list-heading">
+            <div>
+              <h3 id="budget-history-title">Historial de presupuestos</h3>
+              <p>Los presupuestos pagados y rechazados quedan guardados como referencia.</p>
+            </div>
+          </div>
+          <p id="budget-history-empty" class="state-message state-message--empty">Todavía no hay presupuestos resueltos.</p>
+          <div class="table-scroll">
+            <table id="budget-history-table" class="budget-table" hidden>
+              <caption>Historial de presupuestos pagados o rechazados</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Número</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Documento</th>
+                </tr>
+              </thead>
+              <tbody id="budget-history-list"></tbody>
+            </table>
+          </div>
+        </section>
       </section>
     </main>
 

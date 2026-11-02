@@ -12,7 +12,11 @@ La versión inicial permite:
 - eliminar un producto con confirmación;
 - buscar y filtrar por categoría;
 - aumentar o disminuir stock con una operación explícita;
-- consultar el resumen del inventario.
+- consultar el resumen del inventario;
+- preparar presupuestos seleccionando productos y cantidades;
+- reservar stock al emitir un presupuesto y generar un PDF descargable;
+- marcar presupuestos pendientes como pagados o rechazados;
+- devolver automáticamente el stock reservado cuando un presupuesto se rechaza y conservar un historial de todos los presupuestos.
 
 El alcance contractual se encuentra en [`docs/spec.md`](docs/spec.md), con decisiones relevantes en [`docs/decisiones.md`](docs/decisiones.md) y el plan técnico en [`docs/plan.md`](docs/plan.md).
 
@@ -58,6 +62,7 @@ stock-simple/
 │   │   ├── controllers/
 │   │   ├── services/
 │   │   ├── repositories/
+│   │   ├── utils/          # Generación del PDF de presupuestos
 │   │   └── server.js
 │   └── test/
 ├── frontend/
@@ -143,6 +148,30 @@ curl -X POST http://localhost:3000/api/products \
   -d '{"name":"Mouse","category":"Periféricos","price":"1250.50","stock":5,"description":""}'
 ```
 
+## Presupuestos y reservas de stock
+
+1. Entrá en el apartado **Presupuestos**.
+2. Seleccioná un producto, indicá una cantidad entera positiva y agregalo al detalle. La cantidad no puede superar el stock disponible.
+3. Repetí el proceso con los productos necesarios. El sistema calcula el subtotal de cada línea y el total general.
+4. Al presionar **Generar presupuesto y PDF**, el servidor valida nuevamente los productos, precios y existencias, descuenta el stock y guarda una fotografía del nombre y precio de cada producto en una única transacción. El PDF se descarga automáticamente.
+5. Mientras esté pendiente, el presupuesto aparece en **Presupuestos pendientes** y permite descargar de nuevo el PDF.
+6. Al marcarlo como **Pagado**, sale de pendientes y pasa al historial. El stock permanece descontado.
+7. Al marcarlo como **Rechazado**, sale de pendientes, pasa al historial y el stock reservado se devuelve una sola vez.
+
+Los presupuestos resueltos no se eliminan: permanecen en el historial. Los productos que tienen unidades reservadas en un presupuesto pendiente no se pueden eliminar hasta que ese presupuesto se resuelva. Las modificaciones posteriores del nombre o precio del producto no alteran el presupuesto ya emitido ni su PDF.
+
+La API incorpora estos endpoints adicionales:
+
+| Método y ruta | Propósito |
+|---|---|
+| `POST /api/budgets` | Crear presupuesto y reservar stock. Recibe `items: [{ productId, quantity }]`. |
+| `GET /api/budgets` | Listar presupuestos pendientes y resueltos. |
+| `GET /api/budgets/:id` | Consultar un presupuesto y sus líneas. |
+| `GET /api/budgets/:id/pdf` | Descargar el PDF del presupuesto. |
+| `PATCH /api/budgets/:id/status` | Resolver un presupuesto con `status: "paid"` o `status: "rejected"`. |
+
+Las tablas `budgets` y `budget_items` se crean automáticamente al abrir SQLite, también cuando se utiliza una base de datos existente. Los precios y subtotales se almacenan en centavos enteros para evitar errores de redondeo.
+
 ## Uso local y límite de seguridad
 
 La primera versión no incluye autenticación ni control de usuarios. Por eso debe usarse solo en:
@@ -169,3 +198,4 @@ Para comprobar que los cambios persisten tras reiniciar el servidor:
 - [cambio] 2026-10-28 — Se documentan los comandos reales de instalación, inicialización, ejecución y pruebas del MVP.
 - [cambio] 2026-10-28 — Se precisa que la versión actual es de uso local/controlado y sin autenticación.
 - [cambio] 2026-11-02 — Se documentan la configuración `.env`, las reglas de stock y categorías, y la suite completa de pruebas.
+- [cambio] 2026-11-02 — Se incorpora el flujo de presupuestos con reserva transaccional de stock, PDF e historial de pagados/rechazados.

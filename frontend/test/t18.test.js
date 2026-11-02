@@ -240,7 +240,7 @@ function createApi(fetch) {
   new vm.Script(`${source}
     globalThis.apiFunctions = {
       getProducts: typeof getProducts === 'function' ? getProducts : null,
-      adjustProductStock: typeof adjustProductStock === 'function' ? adjustProductStock : null,
+      updateProduct: typeof updateProduct === 'function' ? updateProduct : null,
     };
   `, { filename: 'frontend/js/api.js' }).runInContext(context);
   return context.apiFunctions;
@@ -255,8 +255,7 @@ function runApp(dom, api, deleteProduct = async () => {}) {
     confirm: () => true,
     getProducts: api.getProducts,
     createProduct: async () => {},
-    updateProduct: async () => {},
-    adjustProductStock: api.adjustProductStock,
+    updateProduct: api.updateProduct,
     deleteProduct,
     Promise,
     Error,
@@ -328,7 +327,7 @@ function createAdjustmentScreen({ failUpdate = false } = {}) {
         json: async () => inventory,
       };
     }
-    if (method === 'PATCH' && parsedUrl.pathname === '/api/products/1/stock') {
+    if (method === 'PUT' && parsedUrl.pathname === '/api/products/1') {
       const body = JSON.parse(options.body || '{}');
       if (failUpdate) {
         return {
@@ -343,13 +342,12 @@ function createAdjustmentScreen({ failUpdate = false } = {}) {
         };
       }
       const product = inventory.find((entry) => entry.id === 1);
-      const quantity = Number(body.quantity);
-      if (body.operation === 'increase') product.stock += quantity;
-      if (body.operation === 'decrease') product.stock -= quantity;
+      Object.assign(product, body);
+      product.updatedAt = '2026-11-02T12:00:00.000Z';
       return {
         ok: true,
         status: 200,
-        json: async () => ({ ...product, stock: product.stock }),
+        json: async () => ({ ...product }),
       };
     }
     return { ok: true, status: 200, json: async () => ({}) };
@@ -359,69 +357,49 @@ function createAdjustmentScreen({ failUpdate = false } = {}) {
   return { dom, api, requests };
 }
 
-function findAdjustButton(dom, productName) {
-  const buttons = [...dom.document.querySelectorAll('button')];
-  return buttons.find((button) =>
-    /ajustar stock/i.test(`${button.textContent} ${button.getAttribute('aria-label') || ''}`) &&
-    (button.getAttribute('aria-label') || '').includes(productName)
-  );
-}
-
-function findStockForm(dom) {
-  const form = dom.document.getElementById('stock-adjustment-form');
-  assert.ok(form, 'Debe existir un formulario accesible para ajustar el stock');
-  return form;
-}
-
-test('T-18: el producto ofrece ajuste de stock y actualiza el stock visible tras una respuesta exitosa', async () => {
+test('T-18: el stock se edita desde el formulario del producto y no hay acción separada', async () => {
   const screen = createAdjustmentScreen();
   await settlePromises();
 
-  const adjustButton = findAdjustButton(screen.dom, 'Mouse inalámbrico');
-  assert.ok(adjustButton, 'Cada producto debe mostrar una acción accesible para ajustar el stock');
-  adjustButton.click();
-  await settlePromises();
+  const row = findInventoryRow(screen.dom, 'Mouse inalámbrico');
+  assert.ok(row, 'El producto debe mostrarse en el inventario');
+  const actionButtons = row.children[4].querySelectorAll('button');
+  assert.deepEqual(actionButtons.map((button) => button.textContent.trim()).sort(), ['Editar', 'Eliminar']);
 
-  const form = findStockForm(screen.dom);
-  const operation = form.elements.operation;
-  const quantity = form.elements.quantity;
-  assert.ok(operation, 'El formulario debe permitir elegir aumentar o disminuir');
-  assert.ok(quantity, 'El formulario debe permitir ingresar una cantidad positiva');
-
-  operation.value = 'increase';
-  quantity.value = '2';
+  const editButton = actionButtons.find((button) => button.textContent.trim() === 'Editar');
+  editButton.click();
+  const form = screen.dom.document.getElementById('edit-product-form');
+  assert.equal(form.elements.stock.value, '5');
+  form.elements.stock.value = '7';
   form.dispatch('submit');
   await settlePromises();
 
-  const row = findInventoryRow(screen.dom, 'Mouse inalámbrico');
-  assert.ok(row, 'El producto debe seguir visible tras el ajuste de stock');
-  assert.equal(rowValues(row)[3], '7');
-  const patchRequest = screen.requests.find(({ url, options }) => {
-    const parsed = new URL(url, 'http://localhost');
-    return parsed.pathname === '/api/products/1/stock' && options.method === 'PATCH';
-  });
-  assert.ok(patchRequest, 'La interfaz debe llamar a PATCH /api/products/:id/stock');
-  assert.equal(JSON.parse(patchRequest.options.body).quantity, 2);
-  assert.equal(JSON.parse(patchRequest.options.body).operation, 'increase');
+  const updatedRow = findInventoryRow(screen.dom, 'Mouse inalámbrico');
+  assert.equal(rowValues(updatedRow)[3], '7');
+  const updateRequest = screen.requests.find(({ url, options }) =>
+    new URL(url, 'http://localhost').pathname === '/api/products/1' && options.method === 'PUT'
+  );
+  assert.ok(updateRequest, 'Guardar cambios debe actualizar el producto mediante PUT');
+  assert.equal(JSON.parse(updateRequest.options.body).stock, 7);
+  assert.equal(screen.dom.document.getElementById('stock-adjustment-panel'), null);
 });
 
-test('T-18: una cantidad inválida no modifica el stock y muestra el error del backend', async () => {
-  const screen = createAdjustmentScreen({ failUpdate: true });
-  await settlePromises();
-
-  const adjustButton = findAdjustButton(screen.dom, 'Mouse inalámbrico');
-  adjustButton.click();
-  await settlePromises();
-
-  const form = findStockForm(screen.dom);
-  form.elements.operation.value = 'decrease';
-  form.elements.quantity.value = '8';
-  form.dispatch('submit');
+test('T-18: rechaza un stock decimal desde el formulario de edición sin llamar a la API', async () => {
+  const screen = createAdjustmentScreen();
   await settlePromises();
 
   const row = findInventoryRow(screen.dom, 'Mouse inalámbrico');
-  assert.equal(rowValues(row)[3], '5');
-  const error = screen.dom.document.getElementById('stock-adjustment-error');
-  assert.ok(error, 'Debe mostrar un mensaje de error accesible para la operación inválida');
-  assert.match(error.textContent, /La cantidad de ajuste no es válida/i);
+  const editButton = row.children[4].querySelectorAll('button').find((button) => button.textContent.trim() === 'Editar');
+  editButton.click();
+  const form = screen.dom.document.getElementById('edit-product-form');
+  form.elements.stock.value = '1.5';
+  form.dispatch('submit');
+  await settlePromises();
+
+  const updateRequests = screen.requests.filter(({ options }) => options.method === 'PUT');
+  assert.equal(updateRequests.length, 0, 'El frontend debe validar antes de enviar la edición');
+  const error = screen.dom.document.getElementById('edit-form-error');
+  assert.ok(error, 'Debe existir un mensaje de validación accesible');
+  assert.match(error.textContent, /stock inicial|stock/i);
+  assert.equal(rowValues(findInventoryRow(screen.dom, 'Mouse inalámbrico'))[3], '5');
 });

@@ -450,13 +450,11 @@ test('la interfaz ejecutada renderiza productos del API en celdas, en orden y co
       assert.ok(controls.length > 0, 'Una celda de acciones debe contener controles operables');
       const labels = controls.map((control) => control.textContent.trim()).sort();
       assert.ok(
-        labels.includes('Editar') && labels.includes('Eliminar'),
-        'Las operaciones operables deben incluir edición y eliminación'
+        labels.includes('Editar') && labels.includes('Eliminar') && labels.length === 2,
+        'Las únicas acciones visibles deben ser edición y eliminación'
       );
-      assert.ok(
-        labels.includes('Ajustar stock'),
-        'T-18 incorpora la acción operable de ajuste de stock en la fila'
-      );
+      assert.equal(labels.includes('Ajustar stock'), false,
+        'El stock se modifica dentro del formulario de edición, no desde una acción separada');
     }
   }
   assert.equal(dom.find('img'), null, 'el nombre recibido no debe crear elementos HTML');
@@ -500,18 +498,15 @@ test('los errores no se convierten en una lista vacía exitosa ni en datos ficti
   assert.doesNotMatch(app, /catch\s*\([^)]*\)\s*\{[^}]*products\s*=\s*\[\]/s);
 });
 
-test('la UI y la API incorporan ajuste de stock como operación operable del MVP', () => {
+test('la UI permite modificar el stock desde el formulario de edición del producto', () => {
   const html = readDeliverable('index.html');
   const api = readDeliverable(path.join('js', 'api.js'));
   const app = readDeliverable(path.join('js', 'app.js'));
 
-  assert.match(api, /\bPATCH\b/i);
-  assert.match(api, /\/stock\b|adjustProductStock/i);
-  assert.match(app, /adjustProductStock|Ajustar stock|stock-adjustment/i);
-  assert.match(
-    `${html}\n${app}`,
-    /<(?:button|a)\b[^>]*>[\s\S]*?\b(?:ajustar stock|aumentar stock|disminuir stock)\b[\s\S]*?<\/(?:button|a)>/i
-  );
+  assert.match(html, /id="edit-product-stock"[^>]*name="stock"/i);
+  assert.match(app, /editForm\.elements\.stock/);
+  assert.match(app, /stock:\s*Number\(product\.stockText\)/);
+  assert.doesNotMatch(`${html}\n${app}`, /stock-adjustment-panel|Ajustar stock/i);
 });
 
 test('los controles existentes tienen nombre accesible y foco visible para teclado', () => {

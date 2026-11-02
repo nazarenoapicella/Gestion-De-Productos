@@ -7,8 +7,8 @@ Los siguientes términos tienen un significado concreto dentro de Stock Simple. 
 | **Producto** | Un registro del catálogo con nombre, descripción opcional, categoría, precio y cantidad actual de stock. El nombre debe ser único ignorando mayúsculas, minúsculas y tildes; cada registro tiene un identificador propio. |
 | **Inventario** | Conjunto de productos registrados y sus cantidades actuales en stock. |
 | **Stock** | Cantidad entera de unidades disponibles de un producto. Puede ser cero, pero nunca negativa. |
-| **Stock inicial** | Cantidad que se indica al crear un producto. Después de la creación, los cambios se hacen mediante la función de ajuste de stock. |
-| **Ajuste de stock** | Operación explícita para aumentar o disminuir la cantidad actual de un producto. En el MVP no genera un historial de movimientos. |
+| **Stock inicial** | Cantidad que se indica al crear un producto. Después de la creación, se puede actualizar desde el campo Stock disponible del formulario Editar producto. |
+| **Ajuste de stock** | Operación histórica de API para aumentar o disminuir la cantidad actual de un producto. La interfaz principal permite establecer el stock disponible desde el formulario de edición; no genera un historial de movimientos. |
 | **Stock bajo** | Estado de un producto cuya cantidad actual es menor o igual que cinco unidades. Incluye los productos sin unidades disponibles. |
 | **Producto sin stock** | Producto cuya cantidad actual es exactamente cero. También se considera de stock bajo. |
 | **Categoría** | Texto obligatorio que se utiliza para clasificar y filtrar productos. No es una entidad administrable independiente en el MVP y puede utilizarse en muchos productos. |
@@ -28,3 +28,12 @@ Los siguientes términos tienen un significado concreto dentro de Stock Simple. 
 ## Historial de cambios
 
 - [cambio] 2026-10-22 — Se definen los términos centrales para evitar interpretaciones diferentes durante el análisis y la implementación.
+
+
+### Reserva de stock
+
+Unidades que se descuentan del stock disponible al generar un presupuesto pendiente. Si se paga, permanecen descontadas; si se rechaza, se devuelven una sola vez.
+
+### Presupuesto
+
+Documento comercial que conserva los productos, las cantidades, los precios y el total calculados al momento de su emisión. Puede estar pendiente, pagado o rechazado.

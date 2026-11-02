@@ -176,3 +176,27 @@ test("reinicializar al reabrir no elimina filas existentes", () => {
     removeDatabaseFiles(databasePath);
   }
 });
+
+
+test("usa una base realmente en memoria y no comparte datos entre conexiones", () => {
+  const { openDatabase } = require(databaseModule);
+  let first;
+  let second;
+
+  try {
+    first = openDatabase(":memory:");
+    insertProduct(first, {
+      name: "Temporal",
+      category: "Prueba",
+      priceCents: 100,
+      stock: 1,
+    });
+    assert.equal(first.prepare("SELECT COUNT(*) AS count FROM products").get().count, 1);
+
+    second = openDatabase(":memory:");
+    assert.equal(second.prepare("SELECT COUNT(*) AS count FROM products").get().count, 0);
+  } finally {
+    first?.close();
+    second?.close();
+  }
+});

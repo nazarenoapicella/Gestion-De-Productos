@@ -341,17 +341,10 @@ function findLabelledControl(dom, id, pattern) {
   return control;
 }
 
-function findClearButton(dom) {
-  const button = dom.document.querySelectorAll('button').find((candidate) =>
-    /limpiar/i.test(`${candidate.textContent} ${candidate.getAttribute('aria-label') || ''}`)
-  );
-  assert.ok(button, 'Debe existir una acción accesible para limpiar los filtros');
-  assert.equal(button.type, 'button', 'Limpiar filtros debe ser un botón nativo operable');
-  assert.ok(
-    (button.getAttribute('aria-label') || button.textContent).trim(),
-    'El botón de limpieza debe tener un nombre accesible'
-  );
-  return button;
+function assertNoManualSearchButtons(dom) {
+  const buttons = dom.document.querySelectorAll('button');
+  assert.equal(buttons.some((button) => /^(buscar|limpiar)$/i.test(button.textContent.trim())), false,
+    'La búsqueda no debe requerir botones Buscar o Limpiar');
 }
 
 function fireFilterEvents(control, eventName) {
@@ -526,29 +519,26 @@ test('buscar router anuncia accesiblemente que no se encontraron productos', asy
   assertOnlyReadRequests(screen);
 });
 
-test('limpiar filtros retorna los tres productos y el control es accesible', async () => {
+test('filtra automáticamente mientras se escribe y elimina los botones Buscar y Limpiar', async () => {
   const screen = await runScreen();
   const search = findLabelledControl(screen.dom, 'search-products', /buscar|nombre/i);
-  const category = findLabelledControl(screen.dom, 'category-filter', /categor/i);
-  const clearButton = findClearButton(screen.dom);
+  assertNoManualSearchButtons(screen.dom);
 
   search.value = 'mouse';
-  fireFilterEvents(search, 'input');
-  category.value = 'Accesorios';
-  fireFilterEvents(category, 'change');
+  search.dispatch('input');
+  await new Promise((resolve) => setTimeout(resolve, 260));
   await settlePromises();
-  clearButton.click();
-  await settlePromises();
+  assertNames(screen.dom, ['Mouse inalámbrico', 'Mousepad']);
+  assert.ok(screen.requests.some(({ url }) =>
+    new URL(url, 'http://localhost').searchParams.get('search') === 'mouse'
+  ), 'La consulta debe realizarse sin enviar un formulario ni tocar un botón');
 
-  assert.equal(search.value, '');
-  assert.equal(category.value, '');
+  search.value = '';
+  search.dispatch('input');
+  await new Promise((resolve) => setTimeout(resolve, 260));
+  await settlePromises();
   assertNames(screen.dom, ['Mouse inalámbrico', 'Teclado', 'Mousepad']);
-  const clearedRequest = screen.requests.find(({ url }) => {
-    const parameters = new URL(url, 'http://localhost').searchParams;
-    return !parameters.has('search') && !parameters.has('category');
-  });
-  assert.ok(clearedRequest, 'Limpiar debe volver a consultar sin parámetros de filtro');
-  assert.equal(clearedRequest.options.method, 'GET');
+  assertNoManualSearchButtons(screen.dom);
   assertOnlyReadRequests(screen);
 });
 
