@@ -57,7 +57,7 @@ function findAll(database, filters = {}) {
     values.push(`%${escapeLike(filters.search.toLowerCase())}%`);
   }
   if (filters.category) {
-    conditions.push("unicode_lower(category) = unicode_lower(?)");
+    conditions.push("normalize_text(category) = normalize_text(?)");
     values.push(filters.category);
   }
 

@@ -1,8 +1,8 @@
 # Especificación funcional — Stock Simple
 
-**Estado:** contrato inicial del MVP; revisar antes de comenzar la implementación.  
-**Versión:** 1.0.  
-**Última actualización:** 2026-10-22.
+**Estado:** especificación vigente del MVP.  
+**Versión:** 1.1.  
+**Última actualización:** 2026-11-02.
 
 Este documento describe qué debe hacer la primera versión de Stock Simple. Debe servir como referencia común para quien solicita el sistema, quien lo analiza, quienes lo programan y los agentes de IA que colaboren. La implementación debe ajustarse a esta especificación; si se necesita otro comportamiento, primero debe revisarse y aprobarse el cambio documental.
 
@@ -73,23 +73,23 @@ El backend debe guardar el precio en centavos enteros. La interfaz puede mostrar
 
 En las solicitudes y respuestas JSON de la API, `price` se representa como texto decimal, por ejemplo `"1250.50"`, para conservar exactamente los centavos. Se aceptan entradas decimales no negativas con hasta dos cifras decimales y sin separadores de miles ni notación exponencial. El backend las convierte a `price_cents`. Por el límite de representación segura de enteros en JavaScript, `price_cents` no puede superar `Number.MAX_SAFE_INTEGER`; este es un límite técnico, no comercial.
 
-El nombre de un producto no necesita ser único en el MVP. Dos registros con el mismo nombre son válidos si tienen identificadores distintos.
+El nombre de un producto debe ser único después de normalizar mayúsculas, minúsculas, tildes y espacios repetidos. Se considera duplicado cualquier caso con la misma escritura equivalente, por ejemplo "Teclado Mecánico" y "teclado mecanico".
 
 ### 5.2 Categoría
 
 La categoría es un campo de texto del producto, no una entidad separada. No existe un formulario independiente para crear, editar o eliminar categorías.
 
-Al ingresar una categoría, se deben quitar los espacios al principio y al final. Para filtrar, las comparaciones ignoran mayúsculas y minúsculas. La interfaz puede sugerir categorías ya utilizadas, pero esa sugerencia no debe introducir una regla adicional que impida registrar texto válido.
+Al ingresar una categoría, se deben quitar los espacios al principio y al final. Una categoría puede estar asociada a muchos productos: no es un identificador único. Para evitar variantes visuales innecesarias, si ya existe una categoría equivalente se conserva su escritura canónica (ignorando mayúsculas, minúsculas, tildes y espacios repetidos). La interfaz puede sugerir categorías existentes y también permitir crear una nueva.
 
 ## 6. Reglas de negocio
 
 ### RN-01 — Nombre obligatorio
 
-Un producto no puede crearse ni actualizarse con un nombre vacío después de quitar espacios externos. Se permiten nombres repetidos.
+Un producto no puede crearse ni actualizarse con un nombre vacío después de quitar espacios externos. El nombre debe ser único cuando se normaliza para ignorar mayúsculas, minúsculas, tildes y espacios repetidos.
 
-### RN-02 — Categoría obligatoria
+### RN-02 — Categoría obligatoria y reutilizable
 
-Un producto debe tener una categoría no vacía después de quitar espacios externos.
+Un producto debe tener una categoría no vacía después de quitar espacios externos. Una misma categoría puede utilizarse en muchos productos. Si el texto ingresado coincide con una categoría existente al ignorar mayúsculas, minúsculas, tildes y espacios repetidos, el sistema reutiliza la escritura ya registrada.
 
 ### RN-03 — Validación del precio
 
@@ -99,9 +99,9 @@ El precio debe recibirse como texto decimal no negativo, sin separadores de mile
 
 El stock inicial y el stock resultante de cualquier ajuste deben ser números enteros mayores o iguales que cero. No se aceptan decimales, valores negativos ni cantidades no numéricas.
 
-### RN-05 — Edición separada del stock
+### RN-05 — Edición de datos comerciales sin modificar stock
 
-La operación de editar un producto actualiza nombre, descripción, categoría y precio. No puede cambiar el stock, aunque el cliente incluya accidentalmente un campo `stock` en la solicitud de edición. Los cambios de stock se realizan mediante la operación específica de ajuste.
+La edición normal actualiza nombre, descripción, categoría y precio. No modifica el stock, aunque un cliente envíe ese campo por error. El stock inicial se define al crear el producto y, posteriormente, solo cambia mediante la acción específica de ajuste (RN-06 y RN-07).
 
 ### RN-06 — Aumento del stock
 
@@ -117,7 +117,7 @@ Un producto tiene stock bajo cuando `stock <= 5`. El valor 5 es un umbral fijo e
 
 ### RN-09 — Productos registrados
 
-El indicador de productos registrados cuenta registros de productos, no unidades físicas. Dos productos con el mismo nombre cuentan como dos registros.
+El indicador de productos registrados cuenta registros de productos, no unidades físicas.
 
 ### RN-10 — Unidades en stock
 
@@ -133,7 +133,7 @@ La búsqueda acepta texto parcial e ignora mayúsculas y minúsculas. Los espaci
 
 ### RN-13 — Filtro por categoría
 
-El filtro coincide con la categoría completa e ignora mayúsculas y minúsculas. Si no se selecciona categoría, no limita el listado.
+El filtro coincide con la categoría completa e ignora mayúsculas, minúsculas, tildes y espacios repetidos. Si no se selecciona categoría, no limita el listado.
 
 ### RN-14 — Combinación de filtros
 
@@ -187,10 +187,10 @@ Criterios de aceptación:
 Criterios de aceptación:
 
 - El formulario muestra los valores actuales del producto.
-- Se pueden cambiar nombre, descripción, categoría y precio.
-- El stock no se modifica desde el formulario de edición.
+- Se pueden cambiar nombre, descripción, categoría y precio desde el flujo de edición. El stock se actualiza únicamente desde la acción específica de ajuste.
 - Una actualización inválida no reemplaza parcialmente los datos existentes.
 - Si el producto no existe, se informa que no fue encontrado.
+- El nombre es único con normalización de mayúsculas, minúsculas y tildes. Las categorías se pueden reutilizar entre productos; las variantes equivalentes conservan una misma escritura canónica.
 
 ### HU-04 — Eliminar producto
 
@@ -258,7 +258,7 @@ Criterios de aceptación:
 | Se cancela el cuadro de confirmación de borrado. | No realizar la eliminación. |
 | El servidor o la base de datos no están disponibles. | Mostrar un error comprensible; no informar falsamente que la operación se guardó. |
 | Una solicitud inválida llega directamente a la API, sin pasar por el formulario web. | El backend la rechaza; no depende de la validación del navegador. |
-| Se registran dos productos con el mismo nombre. | Permitir ambos; cada uno mantiene su identificador y stock independiente. |
+| Se intenta registrar un producto con un nombre ya existente, ignorando mayúsculas, minúsculas y tildes. | Rechazar el alta y conservar el inventario sin cambios. |
 
 ## 9. API prevista
 
@@ -269,7 +269,7 @@ La implementación utilizará rutas JSON bajo `/api`. Los nombres exactos pueden
 | `GET /api/products` | Listar productos; admite `search` y `category` como filtros opcionales. |
 | `GET /api/products/:id` | Consultar un producto por identificador. |
 | `POST /api/products` | Crear un producto. |
-| `PUT /api/products/:id` | Actualizar nombre, descripción, categoría y precio, no el stock. |
+| `PUT /api/products/:id` | Actualizar nombre, descripción, categoría y precio, no el stock. Exige nombre, categoría y precio; descripción es opcional y se conserva si se omite. |
 | `DELETE /api/products/:id` | Eliminar un producto. |
 | `PATCH /api/products/:id/stock` | Aumentar o disminuir el stock mediante operación y cantidad. |
 | `GET /api/summary` | Obtener los tres indicadores del inventario. |

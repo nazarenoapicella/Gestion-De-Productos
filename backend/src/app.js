@@ -6,6 +6,7 @@ const {
   getProduct,
   listProducts,
   updateProduct: updateProductService,
+  validateProductId,
   ValidationError,
 } = require("./services/products.service");
 const {
@@ -47,16 +48,16 @@ function createProductsService(database) {
       return listProducts(repository, filters);
     },
     findProduct(id) {
-      return getProduct(repository, Number(id));
+      return getProduct(repository, id);
     },
     updateProduct(id, input) {
-      return updateProductService(repository, Number(id), input);
+      return updateProductService(repository, id, input);
     },
     deleteProduct(id) {
-      return deleteProductService(repository, Number(id));
+      return deleteProductService(repository, id);
     },
     adjustStock(id, input) {
-      return adjustStockService(repository, Number(id), input);
+      return adjustStockService(repository, validateProductId(id), input);
     },
   };
 }
@@ -85,18 +86,25 @@ function errorHandler(error, request, response, next) {
     error instanceof StockAdjustmentError &&
     ["VALIDATION_ERROR", "INSUFFICIENT_STOCK"].includes(error.code);
   const isInvalidJson = error.type === "entity.parse.failed";
+  const isPayloadTooLarge = error.type === "entity.too.large";
 
-  if (
-    error instanceof ValidationError ||
-    isInvalidStockAdjustment ||
-    isInvalidJson
-  ) {
+  if (error instanceof ValidationError || isInvalidStockAdjustment || isInvalidJson) {
     response.status(400).json({
       error: {
         code: "VALIDATION_ERROR",
         message: isInvalidJson
           ? "El cuerpo de la solicitud debe contener JSON válido."
           : error.message,
+      },
+    });
+    return;
+  }
+
+  if (isPayloadTooLarge) {
+    response.status(413).json({
+      error: {
+        code: "PAYLOAD_TOO_LARGE",
+        message: "La solicitud es demasiado grande. Reducí los datos e intentá nuevamente.",
       },
     });
     return;
@@ -112,15 +120,43 @@ function errorHandler(error, request, response, next) {
 }
 
 function createApp({ database, productsService } = {}) {
+  if (!database && !productsService) {
+    throw new TypeError("createApp requiere una conexión a la base de datos o un productsService.");
+  }
+
   const service = productsService || createProductsService(database);
   const app = express();
 
-  app.use(express.json());
+  app.disable("x-powered-by");
+  app.use((request, response, next) => {
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    response.setHeader("Referrer-Policy", "same-origin");
+    response.setHeader("X-Frame-Options", "DENY");
+    response.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'",
+    );
+    if (request.path === "/api" || request.path.startsWith("/api/")) {
+      response.setHeader("Cache-Control", "no-store");
+    }
+    next();
+  });
+  app.use(express.json({ limit: "32kb" }));
   app.use("/api/products", createProductsRouter(service));
-  app.use("/api/summary", createSummaryRouter(createSummaryService(database)));
+  if (database) {
+    app.use("/api/summary", createSummaryRouter(createSummaryService(database)));
+  }
+  app.use("/api", (request, response) => {
+    response.status(404).json({
+      error: {
+        code: "NOT_FOUND",
+        message: "El recurso de API solicitado no existe.",
+      },
+    });
+  });
   app.use(errorHandler);
 
   return app;
 }
 
-module.exports = { createApp };
+module.exports = { createApp, createProductsService, errorHandler };

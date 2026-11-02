@@ -4,14 +4,14 @@ Los siguientes términos tienen un significado concreto dentro de Stock Simple. 
 
 | Término | Significado en este proyecto |
 |---|---|
-| **Producto** | Un registro del catálogo con nombre, descripción opcional, categoría, precio y cantidad actual de stock. Tener dos productos con el mismo nombre no queda prohibido por el MVP; cada registro tiene su propio identificador. |
+| **Producto** | Un registro del catálogo con nombre, descripción opcional, categoría, precio y cantidad actual de stock. El nombre debe ser único ignorando mayúsculas, minúsculas y tildes; cada registro tiene un identificador propio. |
 | **Inventario** | Conjunto de productos registrados y sus cantidades actuales en stock. |
 | **Stock** | Cantidad entera de unidades disponibles de un producto. Puede ser cero, pero nunca negativa. |
 | **Stock inicial** | Cantidad que se indica al crear un producto. Después de la creación, los cambios se hacen mediante la función de ajuste de stock. |
 | **Ajuste de stock** | Operación explícita para aumentar o disminuir la cantidad actual de un producto. En el MVP no genera un historial de movimientos. |
 | **Stock bajo** | Estado de un producto cuya cantidad actual es menor o igual que cinco unidades. Incluye los productos sin unidades disponibles. |
 | **Producto sin stock** | Producto cuya cantidad actual es exactamente cero. También se considera de stock bajo. |
-| **Categoría** | Texto obligatorio que se utiliza para clasificar y filtrar productos. No es una entidad administrable independiente en el MVP. |
+| **Categoría** | Texto obligatorio que se utiliza para clasificar y filtrar productos. No es una entidad administrable independiente en el MVP y puede utilizarse en muchos productos. |
 | **Productos registrados** | Número de registros de producto existentes, independientemente de cuántas unidades tenga cada uno. |
 | **Unidades en stock** | Suma de las cantidades actuales de todos los productos. No representa la cantidad de productos diferentes. |
 | **CRUD** | Operaciones de crear, leer, actualizar y eliminar información. |

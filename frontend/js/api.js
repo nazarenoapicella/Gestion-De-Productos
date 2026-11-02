@@ -77,7 +77,14 @@ export async function getSummary() {
     summaryErrorMessage,
   );
 
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Array.isArray(body) ||
+    !["productsCount", "unitsInStock", "lowStockCount"].every((key) =>
+      Number.isSafeInteger(body[key]) && body[key] >= 0
+    )
+  ) {
     throw new Error(summaryErrorMessage);
   }
 

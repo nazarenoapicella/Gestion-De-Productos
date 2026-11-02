@@ -534,7 +534,7 @@ test('el envío válido muestra éxito y añade el producto al listado después 
   assert.ok(dom.requests.filter(({ options }) => !options.method || options.method === 'GET').length >= 2,
     'Después del POST debe volver a consultar el listado');
   const rows = dom.document.querySelectorAll('tbody tr');
-  assert.ok(rows.some((row) => row.textContent.includes('Mouse') && row.textContent.includes('1250.50')));
+  assert.ok(rows.some((row) => row.textContent.includes('Mouse') && row.textContent.includes('1.250,50')));
   assert.ok(!isVisible(form) || ['name', 'category', 'price', 'stock']
     .every((name) => field(form, name).value === ''),
   'Tras el alta exitosa, el formulario debe cerrarse o limpiarse');

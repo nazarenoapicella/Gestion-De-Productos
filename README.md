@@ -75,14 +75,17 @@ stock-simple/
 - npm.
 - Acceso local o dentro de un entorno controlado.
 
-## Instalación
+## Instalación y configuración
 
 Desde la raíz del proyecto:
 
 ```bash
 cd backend
 npm install
+cp .env.example .env
 ```
+
+El servidor carga automáticamente `backend/.env` con las opciones nativas de Node.js. Podés editar `PORT`, `HOST` y `DATABASE_PATH` según tu entorno. No subas el archivo `.env` a Git.
 
 ## Inicialización de la base de datos
 
@@ -102,7 +105,7 @@ cd backend
 npm start
 ```
 
-Luego abre la URL en el navegador:
+Luego abrí la URL en el navegador:
 
 ```text
 http://localhost:3000
@@ -165,3 +168,4 @@ Para comprobar que los cambios persisten tras reiniciar el servidor:
 - [cambio] 2026-10-22 — Se crea la documentación inicial y se define el alcance provisional de la primera versión.
 - [cambio] 2026-10-28 — Se documentan los comandos reales de instalación, inicialización, ejecución y pruebas del MVP.
 - [cambio] 2026-10-28 — Se precisa que la versión actual es de uso local/controlado y sin autenticación.
+- [cambio] 2026-11-02 — Se documentan la configuración `.env`, las reglas de stock y categorías, y la suite completa de pruebas.

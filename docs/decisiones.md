@@ -33,13 +33,13 @@ El backend servirá la interfaz estática y la API bajo `/api` para mantener sen
 
 **Estado:** adoptada.
 
-Cada producto tiene identificador generado automáticamente, nombre obligatorio, descripción opcional, categoría obligatoria, precio en pesos argentinos (ARS), cantidad actual de stock y marcas de tiempo de creación y última modificación.
+Cada producto tiene identificador generado automáticamente, nombre obligatorio, descripción opcional, categoría obligatoria, precio en pesos argentinos (ARS), cantidad actual de stock y marcas de tiempo de creación y última modificación. El nombre se valida por igualdad normalizada para evitar duplicados equivalentes entre mayúsculas, minúsculas y tildes. Las categorías son reutilizables; las variantes equivalentes se canonicalizan para mantener una escritura consistente.
 
 ## D-005 — Categorías como texto
 
 **Estado:** adoptada.
 
-La categoría se guarda como texto en el producto. No habrá una tabla ni una pantalla de administración de categorías en el MVP. La aplicación puede sugerir categorías que ya existan para evitar diferencias de escritura; el servidor quitará espacios sobrantes y la búsqueda por categoría ignorará mayúsculas y minúsculas.
+La categoría se guarda como texto en el producto. No habrá una tabla ni una pantalla de administración de categorías en el MVP. Una categoría puede compartirse entre muchos productos. La aplicación puede sugerir categorías existentes o permitir una nueva en el mismo formulario; el servidor quitará espacios sobrantes y, si encuentra una categoría equivalente ignorando mayúsculas, minúsculas, tildes y espacios repetidos, conservará su escritura canónica.
 
 **Motivo:** evitar el CRUD de categorías y las reglas adicionales que implicaría borrar o modificar una categoría utilizada por productos.
 
@@ -53,9 +53,9 @@ Los precios se expresan en pesos argentinos (ARS), admiten cero o un valor posit
 
 **Estado:** adoptada.
 
-Editar un producto permite cambiar nombre, descripción, categoría y precio, pero no la cantidad en stock. El stock inicial se establece al crear el producto y, luego, se actualiza mediante la acción específica de ajuste de stock.
+La edición normal permite cambiar nombre, descripción, categoría y precio. El stock inicial se define al crear el producto; las modificaciones posteriores se realizan exclusivamente desde la acción específica de ajuste de stock, mediante `PATCH /api/products/:id/stock`. El endpoint `PUT /api/products/:id` ignora el campo `stock` si un cliente antiguo lo envía por error.
 
-**Motivo:** evitar que una edición común cambie el stock accidentalmente y mantener clara la intención de cada acción.
+**Motivo:** separar los cambios del catálogo de los movimientos de inventario, evitar cambios accidentales en cantidades y mantener un único flujo explícito para aumentos y disminuciones.
 
 ## D-008 — Reglas para ajustar stock
 
@@ -91,7 +91,7 @@ Eliminar significa borrar el producto de la base de datos. La interfaz solicita 
 
 **Estado:** adoptada.
 
-La búsqueda por nombre es una coincidencia parcial que ignora mayúsculas y minúsculas. El filtro de categoría coincide con el nombre completo de la categoría, sin distinguir mayúsculas y minúsculas. Ambos filtros se pueden usar al mismo tiempo. Sin búsqueda ni categoría seleccionada, se muestran todos los productos.
+La búsqueda por nombre es una coincidencia parcial que ignora mayúsculas y minúsculas. El filtro de categoría coincide con el nombre completo de la categoría, sin distinguir mayúsculas, minúsculas, tildes ni espacios repetidos. Ambos filtros se pueden usar al mismo tiempo. Sin búsqueda ni categoría seleccionada, se muestran todos los productos.
 
 La lista se ordena por nombre de producto en orden alfabético ascendente. No habrá paginación en el MVP.
 
@@ -143,3 +143,4 @@ La pantalla principal y el listado se implementan antes que las operaciones de i
 - [cambio] 2026-10-28 — D-015 fija el precio decimal como texto en solicitudes y respuestas JSON para preservar centavos con precisión.
 - [cambio] 2026-10-28 — D-016 adopta el DTO de producto sin `lowStock` y el formato/códigos comunes de error de la API.
 - [cambio] 2026-10-28 — D-017 establece la implementación incremental de la interfaz y evita presentar acciones todavía no operativas.
+- [cambio] 2026-11-02 — Se confirma que las categorías son reutilizables y se canonicalizan; se separa la edición comercial del ajuste de stock para evitar mutaciones accidentales.

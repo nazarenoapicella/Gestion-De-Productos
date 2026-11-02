@@ -3,94 +3,212 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Consulta el inventario de productos de Stock Simple.">
+    <meta name="theme-color" content="#102a36">
+    <meta name="description" content="Gestioná productos y controlá el stock de tu comercio con Stock Simple.">
     <title>Inventario | Stock Simple</title>
     <link rel="stylesheet" href="css/styles.css">
     <script type="module" src="js/app.js"></script>
   </head>
   <body>
+
+    <section id="create-product-panel" class="form-panel modal-panel" role="dialog" aria-modal="true" aria-labelledby="create-product-title" hidden>
+      <div class="form-panel__header">
+        <div>
+          <p class="eyebrow">Nuevo registro</p>
+          <h2 id="create-product-title">Registrar producto</h2>
+          <p class="form-intro">Completá los datos para agregar un producto al inventario.</p>
+        </div>
+        <span class="modal-step" aria-hidden="true">＋</span>
+      </div>
+      <form id="create-product-form" novalidate>
+        <p id="form-error" class="state-message state-message--error" role="alert" hidden></p>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="product-name">Nombre <span aria-hidden="true">*</span></label>
+            <input id="product-name" name="name" type="text" maxlength="100" required autocomplete="off" placeholder="Ej. Mouse inalámbrico">
+          </div>
+          <div class="form-field">
+            <label for="product-category-select">Categoría <span aria-hidden="true">*</span></label>
+            <select id="product-category-select" name="category-select" required>
+              <option value="">Seleccioná una categoría</option>
+              <option value="__new__">＋ Crear nueva categoría</option>
+            </select>
+            <input id="product-category-custom" name="category" type="text" maxlength="50" placeholder="Escribí una nueva categoría" aria-label="Nueva categoría" required hidden>
+          </div>
+          <div class="form-field">
+            <label for="product-price">Precio (ARS) <span aria-hidden="true">*</span></label>
+            <div class="input-prefix">
+              <span aria-hidden="true">$</span>
+              <input id="product-price" name="price" type="text" inputmode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" maxlength="18" required aria-describedby="price-help" placeholder="1250.50">
+            </div>
+            <small id="price-help">Usá punto para los decimales y hasta dos cifras. Ej.: 1250.50.</small>
+          </div>
+          <div class="form-field">
+            <label for="product-stock">Stock inicial <span aria-hidden="true">*</span></label>
+            <input id="product-stock" name="stock" type="number" min="0" max="9007199254740991" step="1" required inputmode="numeric" placeholder="0">
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="product-description">Descripción <span class="optional-label">Opcional</span></label>
+            <textarea id="product-description" name="description" maxlength="500" rows="3" placeholder="Detalles que te ayuden a identificar el producto…"></textarea>
+          </div>
+        </div>
+        <p class="required-note">* Campos obligatorios</p>
+        <div class="form-actions">
+          <button id="submit-create-product" class="button button--primary" type="submit">Guardar producto</button>
+          <button id="cancel-create-product" class="button button--secondary" type="button">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+
+    <section id="edit-product-panel" class="form-panel modal-panel" role="dialog" aria-modal="true" aria-labelledby="edit-product-title" hidden>
+      <div class="form-panel__header">
+        <div>
+          <p class="eyebrow">Editar registro</p>
+          <h2 id="edit-product-title">Editar producto</h2>
+          <p class="form-intro">Actualizá los datos comerciales. El stock se modifica desde su acción específica.</p>
+        </div>
+        <span class="modal-step" aria-hidden="true">✎</span>
+      </div>
+      <form id="edit-product-form" novalidate>
+        <p id="edit-form-error" class="state-message state-message--error" role="alert" hidden></p>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="edit-product-name">Nombre <span aria-hidden="true">*</span></label>
+            <input id="edit-product-name" name="name" type="text" maxlength="100" required autocomplete="off">
+          </div>
+          <div class="form-field">
+            <label for="edit-product-category-select">Categoría <span aria-hidden="true">*</span></label>
+            <select id="edit-product-category-select" name="category-select" required>
+              <option value="">Seleccioná una categoría</option>
+              <option value="__new__">＋ Crear nueva categoría</option>
+            </select>
+            <input id="edit-product-category-custom" name="category" type="text" maxlength="50" placeholder="Escribí una nueva categoría" aria-label="Nueva categoría" required hidden>
+          </div>
+          <div class="form-field">
+            <label for="edit-product-price">Precio (ARS) <span aria-hidden="true">*</span></label>
+            <div class="input-prefix">
+              <span aria-hidden="true">$</span>
+              <input id="edit-product-price" name="price" type="text" inputmode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" maxlength="18" required aria-describedby="edit-price-help">
+            </div>
+            <small id="edit-price-help">Hasta dos decimales. Ej.: 1500.00.</small>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="edit-product-description">Descripción <span class="optional-label">Opcional</span></label>
+            <textarea id="edit-product-description" name="description" maxlength="500" rows="3"></textarea>
+          </div>
+        </div>
+        <p class="required-note">* Campos obligatorios</p>
+        <div class="form-actions">
+          <button id="submit-edit-product" class="button button--primary" type="submit">Guardar cambios</button>
+          <button id="cancel-edit-product" class="button button--secondary" type="button">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+
+    <section id="stock-adjustment-panel" class="form-panel modal-panel modal-panel--compact" role="dialog" aria-modal="true" aria-labelledby="stock-adjustment-title" hidden>
+      <div class="form-panel__header">
+        <div>
+          <p class="eyebrow">Movimiento de inventario</p>
+          <h2 id="stock-adjustment-title">Ajustar stock</h2>
+          <p id="stock-adjustment-current" class="form-intro">Stock actual: 0 unidades</p>
+        </div>
+        <span class="modal-step" aria-hidden="true">↕</span>
+      </div>
+      <form id="stock-adjustment-form" novalidate>
+        <p id="stock-adjustment-error" class="state-message state-message--error" role="alert" hidden></p>
+        <div class="form-grid form-grid--single">
+          <div class="form-field">
+            <label for="stock-adjustment-operation">Operación <span aria-hidden="true">*</span></label>
+            <select id="stock-adjustment-operation" name="operation" required>
+              <option value="increase">Aumentar stock</option>
+              <option value="decrease">Disminuir stock</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="stock-adjustment-quantity">Cantidad de unidades <span aria-hidden="true">*</span></label>
+            <input id="stock-adjustment-quantity" name="quantity" type="number" min="1" max="9007199254740991" step="1" required inputmode="numeric" placeholder="Ej. 5">
+          </div>
+        </div>
+        <p class="required-note">Ingresá un número entero mayor que cero.</p>
+        <div class="form-actions">
+          <button id="submit-stock-adjustment" class="button button--primary" type="submit">Confirmar ajuste</button>
+          <button id="cancel-stock-adjustment" class="button button--secondary" type="button">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
     <main class="page">
       <header class="page-header">
-        <p class="eyebrow">Stock Simple</p>
-        <h1>Inventario</h1>
-        <p class="page-intro">Consulta los productos y las cantidades disponibles.</p>
-        <button id="open-create-product" class="button button--primary" type="button">
-          Registrar producto
-        </button>
+        <div class="brand-lockup" aria-label="Stock Simple">
+          <span class="brand-mark" aria-hidden="true">S</span>
+          <span class="brand-name">Stock Simple</span>
+        </div>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Panel de control</p>
+            <h1>Inventario</h1>
+            <p class="page-intro">Organizá tus productos y mantené las cantidades siempre actualizadas.</p>
+          </div>
+          <button id="open-create-product" class="button button--primary" type="button">
+            <span aria-hidden="true">＋</span> Registrar producto
+          </button>
+        </div>
       </header>
 
-      <section id="create-product-panel" class="form-panel" aria-labelledby="create-product-title" hidden>
-        <div class="form-panel__header">
-          <h2 id="create-product-title">Registrar producto</h2>
-        </div>
-        <form id="create-product-form">
-          <p id="form-error" class="state-message state-message--error" role="alert" hidden></p>
-          <div class="form-grid">
-            <div class="form-field">
-              <label for="product-name">Nombre</label>
-              <input id="product-name" name="name" type="text" maxlength="100" required autocomplete="off">
-            </div>
-            <div class="form-field">
-              <label for="product-category">Categoría</label>
-              <input id="product-category" name="category" type="text" maxlength="50" required autocomplete="off">
-            </div>
-            <div class="form-field">
-              <label for="product-price">Precio (ARS)</label>
-              <input id="product-price" name="price" type="text" inputmode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" required aria-describedby="price-help">
-              <small id="price-help">Usa un importe no negativo con hasta dos decimales, por ejemplo 1250.50.</small>
-            </div>
-            <div class="form-field">
-              <label for="product-stock">Stock inicial</label>
-              <input id="product-stock" name="stock" type="number" min="0" step="1" required>
-            </div>
-            <div class="form-field form-field--wide">
-              <label for="product-description">Descripción (opcional)</label>
-              <textarea id="product-description" name="description" maxlength="500" rows="3"></textarea>
-            </div>
-          </div>
-          <div class="form-actions">
-            <button id="submit-create-product" class="button button--primary" type="submit">
-              Guardar producto
-            </button>
-            <button id="cancel-create-product" class="button button--secondary" type="button">
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <p id="success-state" class="state-message state-message--success" role="status" aria-live="polite" hidden></p>
-
       <section id="summary-panel" class="summary-panel" aria-labelledby="summary-title">
-        <div class="summary-panel__header">
-          <h2 id="summary-title">Resumen del inventario</h2>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Estado general</p>
+            <h2 id="summary-title">Resumen del inventario</h2>
+          </div>
+          <span class="section-note">Actualizado automáticamente</span>
         </div>
         <p id="summary-error" class="state-message state-message--error" role="alert" hidden></p>
         <div class="summary-grid">
-          <article class="summary-card">
-            <p class="summary-label">Productos registrados</p>
-            <p id="summary-products" class="summary-value" aria-live="polite">0</p>
+          <article class="summary-card summary-card--products">
+            <span class="summary-icon" aria-hidden="true">▦</span>
+            <div>
+              <p class="summary-label">Productos registrados</p>
+              <p id="summary-products" class="summary-value" aria-live="polite">0</p>
+            </div>
           </article>
-          <article class="summary-card">
-            <p class="summary-label">Unidades en stock</p>
-            <p id="summary-units" class="summary-value" aria-live="polite">0</p>
+          <article class="summary-card summary-card--units">
+            <span class="summary-icon" aria-hidden="true">▤</span>
+            <div>
+              <p class="summary-label">Unidades en stock</p>
+              <p id="summary-units" class="summary-value" aria-live="polite">0</p>
+            </div>
           </article>
-          <article class="summary-card">
-            <p class="summary-label">Productos con stock bajo</p>
-            <p id="summary-low-stock" class="summary-value" aria-live="polite">0</p>
+          <article class="summary-card summary-card--low">
+            <span class="summary-icon" aria-hidden="true">!</span>
+            <div>
+              <p class="summary-label">Productos con stock bajo</p>
+              <p id="summary-low-stock" class="summary-value" aria-live="polite">0</p>
+            </div>
           </article>
         </div>
       </section>
 
       <section class="inventory" aria-labelledby="inventory-title">
-        <h2 id="inventory-title">Productos</h2>
+        <div class="inventory-header">
+          <div>
+            <p class="eyebrow">Catálogo</p>
+            <h2 id="inventory-title">Tus productos</h2>
+            <p class="inventory-description">Buscá, filtrá y administrá las existencias de tu comercio.</p>
+          </div>
+        </div>
 
         <form id="filter-form" class="inventory-filters">
-          <div class="form-field">
-            <label for="search-products">Buscar por nombre</label>
-            <input id="search-products" name="search" type="search" autocomplete="off">
+          <div class="form-field search-field">
+            <label for="search-products">Buscar producto</label>
+            <div class="input-with-icon">
+              <span aria-hidden="true">⌕</span>
+              <input id="search-products" name="search" type="search" placeholder="Escribí el nombre…" autocomplete="off">
+            </div>
           </div>
-          <div class="form-field">
+          <div class="form-field category-filter-field">
             <label for="category-filter">Categoría</label>
             <select id="category-filter" name="category">
               <option value="">Todas las categorías</option>
@@ -98,30 +216,28 @@
           </div>
           <div class="filter-actions">
             <button class="button button--primary" type="submit">Buscar</button>
-            <button id="clear-filters" class="button button--secondary" type="button">
-              Limpiar filtros
-            </button>
+            <button id="clear-filters" class="button button--secondary" type="button">Limpiar</button>
           </div>
         </form>
 
-        <p id="loading-state" class="state-message" role="status" aria-live="polite">
-          Cargando productos…
+        <p id="loading-state" class="state-message state-message--loading" role="status" aria-live="polite">
+          <span class="loading-indicator" aria-hidden="true"></span> Cargando productos…
         </p>
-
-        <p id="empty-state" class="state-message" role="status" aria-live="polite" hidden>
-          No hay productos registrados.
+        <p id="empty-state" class="state-message state-message--empty" role="status" aria-live="polite" hidden>
+          <strong>Todavía no hay productos.</strong>
+          <span>Registrá tu primer producto para comenzar a organizar el inventario.</span>
         </p>
-
-        <p id="no-results-state" class="state-message" role="status" aria-live="polite" hidden>
-          No se encontraron productos.
+        <p id="no-results-state" class="state-message state-message--empty" role="status" aria-live="polite" hidden>
+          <strong>No se encontraron productos.</strong>
+          <span>Probá con otro nombre o limpiá los filtros para ver todo el inventario.</span>
         </p>
-
         <p id="error-state" class="state-message state-message--error" role="alert" hidden></p>
         <p id="delete-error-state" class="state-message state-message--error" role="alert" hidden></p>
+        <p id="success-state" class="state-message state-message--success" role="status" aria-live="polite" hidden></p>
 
         <div class="table-scroll">
           <table id="inventory-table" hidden>
-            <caption>Productos registrados en el inventario</caption>
+            <caption>Listado de productos registrados en el inventario</caption>
             <thead>
               <tr>
                 <th scope="col">Nombre</th>
@@ -135,72 +251,8 @@
           </table>
         </div>
       </section>
-
-      <section id="edit-product-panel" class="form-panel" aria-labelledby="edit-product-title" hidden>
-        <div class="form-panel__header">
-          <h2 id="edit-product-title">Editar producto</h2>
-        </div>
-        <form id="edit-product-form">
-          <p id="edit-form-error" class="state-message state-message--error" role="alert" hidden></p>
-          <div class="form-grid">
-            <div class="form-field">
-              <label for="edit-product-name">Nombre</label>
-              <input id="edit-product-name" name="name" type="text" maxlength="100" required autocomplete="off">
-            </div>
-            <div class="form-field">
-              <label for="edit-product-category">Categoría</label>
-              <input id="edit-product-category" name="category" type="text" maxlength="50" required autocomplete="off">
-            </div>
-            <div class="form-field">
-              <label for="edit-product-price">Precio (ARS)</label>
-              <input id="edit-product-price" name="price" type="text" inputmode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" required aria-describedby="edit-price-help">
-              <small id="edit-price-help">Usa un importe no negativo con hasta dos decimales, por ejemplo 1500.00.</small>
-            </div>
-            <div class="form-field form-field--wide">
-              <label for="edit-product-description">Descripción (opcional)</label>
-              <textarea id="edit-product-description" name="description" maxlength="500" rows="3"></textarea>
-            </div>
-          </div>
-          <div class="form-actions">
-            <button id="submit-edit-product" class="button button--primary" type="submit">
-              Guardar cambios
-            </button>
-            <button id="cancel-edit-product" class="button button--secondary" type="button">
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section id="stock-adjustment-panel" class="form-panel" aria-labelledby="stock-adjustment-title" hidden>
-        <div class="form-panel__header">
-          <h2 id="stock-adjustment-title">Ajustar stock</h2>
-        </div>
-        <form id="stock-adjustment-form">
-          <p id="stock-adjustment-error" class="state-message state-message--error" role="alert" hidden></p>
-          <div class="form-grid">
-            <div class="form-field">
-              <label for="stock-adjustment-operation">Acción</label>
-              <select id="stock-adjustment-operation" name="operation">
-                <option value="increase">Aumentar</option>
-                <option value="decrease">Disminuir</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label for="stock-adjustment-quantity">Cantidad</label>
-              <input id="stock-adjustment-quantity" name="quantity" type="number" min="1" step="1" required>
-            </div>
-          </div>
-          <div class="form-actions">
-            <button id="submit-stock-adjustment" class="button button--primary" type="submit">
-              Guardar ajuste
-            </button>
-            <button id="cancel-stock-adjustment" class="button button--secondary" type="button">
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </section>
     </main>
+
+    <button id="modal-backdrop" class="modal-backdrop" type="button" aria-label="Cerrar ventana" tabindex="-1" hidden></button>
   </body>
 </html>

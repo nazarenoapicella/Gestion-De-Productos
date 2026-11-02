@@ -40,11 +40,14 @@ function withDatabase(callback) {
   }
 }
 
+let productSequence = 0;
+
 function createInput(overrides = {}) {
+  productSequence += 1;
   return {
-    name: "Mouse",
+    name: overrides.name ?? `Producto ${productSequence}`,
     description: "Mouse inalámbrico",
-    category: "Periféricos",
+    category: overrides.category ?? `Categoria ${productSequence}`,
     price: "1250.50",
     stock: 5,
     ...overrides,
@@ -62,6 +65,9 @@ function createRepository(database) {
     },
     findById(id) {
       return repository.findById(database, id);
+    },
+    findAll(filters = {}) {
+      return repository.findAll(database, filters);
     },
     count() {
       return database.prepare("SELECT COUNT(*) AS count FROM products").get().count;
@@ -110,6 +116,28 @@ test("crear acepta precio cero y convierte ARS a centavos sin redondear", () => 
     assert.equal(zero.price_cents, 0);
     assert.equal(zero.stock, 0);
     assert.equal(regular.price_cents, 125050);
+    assert.equal(repository.count(), 2);
+  });
+});
+
+test("el nombre debe ser único, pero varios productos pueden compartir categoría", () => {
+  withDatabase((database) => {
+    const repository = createRepository(database);
+    createProduct(repository, createInput({ name: "Teclado Mecánico", category: "Periféricos" }));
+
+    assertValidationError(() =>
+      createProduct(repository, createInput({
+        name: "teclado mecanico",
+        category: "Accesorios",
+      })),
+    );
+
+    const mouse = createProduct(repository, createInput({
+      name: "Mouse Gamer",
+      category: " perifericos ",
+    }));
+
+    assert.equal(mouse.category, "Periféricos");
     assert.equal(repository.count(), 2);
   });
 });
@@ -210,7 +238,7 @@ test("descripción omitida, nula o vacía se persiste como NULL", () => {
   });
 });
 
-test("editar actualiza solo los campos editables y conserva stock aunque venga stock: 99", () => {
+test("editar actualiza los datos comerciales e ignora el stock enviado por error", () => {
   withDatabase((database) => {
     const repository = createRepository(database);
     const original = createPersistedProduct(repository);
@@ -219,6 +247,12 @@ test("editar actualiza solo los campos editables y conserva stock aunque venga s
       update(id, fields) {
         updateFields = fields;
         return repository.update(id, fields);
+      },
+      findById(id) {
+        return repository.findById(id);
+      },
+      findAll(filters = {}) {
+        return repository.findAll(filters);
       },
     };
 
@@ -244,8 +278,27 @@ test("editar actualiza solo los campos editables y conserva stock aunque venga s
     assert.equal(updated.description, "Versión actualizada");
     assert.equal(updated.category, "Accesorios");
     assert.equal(updated.price_cents, 175025);
-    assert.equal(updated.stock, 5);
-    assert.equal(repository.findById(original.id).stock, 5);
+    assert.equal(updated.stock, original.stock);
+    assert.equal(repository.findById(original.id).stock, original.stock);
+  });
+});
+
+
+test("editar rechaza los campos obligatorios omitidos o nulos sin modificar el producto", () => {
+  withDatabase((database) => {
+    const repository = createRepository(database);
+    const original = createPersistedProduct(repository);
+
+    for (const field of ["name", "category", "price"]) {
+      const missing = createInput({ name: "Mouse Pro", category: "Accesorios", price: "1750.25" });
+      delete missing[field];
+      assertValidationError(() => updateProduct(repository, original.id, missing));
+
+      const withNull = createInput({ name: "Mouse Pro", category: "Accesorios", price: "1750.25", [field]: null });
+      assertValidationError(() => updateProduct(repository, original.id, withNull));
+    }
+
+    assert.deepEqual(repository.findById(original.id), original);
   });
 });
 

@@ -434,15 +434,19 @@ test('la interfaz ejecutada renderiza productos del API en celdas, en orden y co
   assert.deepEqual(
     tableRows(dom).map((row) => rowCells(row).slice(0, 4)),
     [
-      ['Mouse', 'Periféricos', '1250.50', '5'],
-      [maliciousName, 'Periféricos', '700.25', '3'],
-      ['Teclado', 'Periféricos', '900.00', '2']
+      ['Mouse', 'Periféricos', '$ 1.250,50', '5'],
+      [maliciousName, 'Periféricos', '$ 700,25', '3'],
+      ['Teclado', 'Periféricos', '$ 900,00', '2']
     ]
   );
   for (const row of tableRows(dom)) {
     const actionCells = row.children.filter((child) => child.tagName === 'TD').slice(4);
     for (const cell of actionCells) {
-      const controls = cell.children.filter((child) => ['BUTTON', 'A'].includes(child.tagName));
+      const controls = cell.children.flatMap((child) =>
+        ['BUTTON', 'A'].includes(child.tagName)
+          ? [child]
+          : (child.children || []).filter((nested) => ['BUTTON', 'A'].includes(nested.tagName)),
+      );
       assert.ok(controls.length > 0, 'Una celda de acciones debe contener controles operables');
       const labels = controls.map((control) => control.textContent.trim()).sort();
       assert.ok(

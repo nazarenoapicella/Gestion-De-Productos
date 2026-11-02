@@ -422,7 +422,7 @@ test('el harness ejecuta la pantalla y representa el producto recibido por GET',
     url === '/api/products' && (options.method || 'GET') === 'GET'
   ));
   assert.deepEqual(tableRows(dom).map((row) => rowValues(row).slice(0, 4)), [
-    ['Mouse', 'Periféricos', '1000.00', '5']
+    ['Mouse', 'Periféricos', '$ 1.000,00', '5']
   ]);
 });
 
@@ -509,7 +509,7 @@ test('guardar Mouse Pro por PUT actualiza el listado y conserva stock 5', async 
   });
   assert.equal(Object.hasOwn(JSON.parse(put.options.body), 'stock'), false);
   assert.deepEqual(tableRows(dom).map((row) => rowValues(row).slice(0, 4)), [
-    ['Mouse Pro', 'Periféricos', '1500.00', '5']
+    ['Mouse Pro', 'Periféricos', '$ 1.500,00', '5']
   ]);
 });
 
@@ -528,7 +528,7 @@ test('un 404 informa que el producto no fue encontrado y no anuncia guardado', a
 
   assertEditError(dom, /no fue encontrado|no existe/i);
   assert.deepEqual(tableRows(dom).map((row) => rowValues(row).slice(0, 4)), [
-    ['Mouse', 'Periféricos', '1000.00', '5']
+    ['Mouse', 'Periféricos', '$ 1.000,00', '5']
   ]);
 });
 
@@ -547,6 +547,6 @@ test('VALIDATION_ERROR no finge el guardado ni reemplaza los datos del listado',
 
   assertEditError(dom, /El precio no es válido/);
   assert.deepEqual(tableRows(dom).map((row) => rowValues(row).slice(0, 4)), [
-    ['Mouse', 'Periféricos', '1000.00', '5']
+    ['Mouse', 'Periféricos', '$ 1.000,00', '5']
   ]);
 });

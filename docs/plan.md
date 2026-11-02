@@ -151,7 +151,7 @@ La comunicación será una API REST con JSON bajo `/api`. Express servirá tambi
 | `GET /api/products` | Listar productos; admite `search` y `category` opcionales. | `200` y una lista de productos. |
 | `GET /api/products/:id` | Consultar un producto. | `200` y el producto, o `404` si no existe. |
 | `POST /api/products` | Crear un producto con nombre, categoría, precio, stock inicial y descripción opcional. | `201` y el producto creado. |
-| `PUT /api/products/:id` | Modificar nombre, descripción, categoría y precio. No modifica stock. | `200` y el producto actualizado, o `404`. |
+| `PUT /api/products/:id` | Modificar nombre, descripción, categoría y precio. Nombre, categoría y precio son obligatorios; descripción puede omitirse para conservarla. No modifica stock. | `200` y el producto actualizado, `400` por datos inválidos o `404`. |
 | `DELETE /api/products/:id` | Eliminar el producto indicado. | `204` sin cuerpo, o `404`. |
 | `PATCH /api/products/:id/stock` | Aumentar o disminuir stock con `operation` y `quantity`. | `200` y el producto actualizado, o un error controlado. |
 | `GET /api/summary` | Obtener los indicadores del inventario. | `200` con los tres indicadores. |
@@ -161,7 +161,7 @@ La comunicación será una API REST con JSON bajo `/api`. Express servirá tambi
 - `operation` será `increase` o `decrease`; `quantity` será un entero positivo.
 - El DTO de producto tendrá `id`, `name`, `description`, `category`, `price` como texto decimal exacto, `stock`, `createdAt` y `updatedAt`, según D-016. No incluirá `lowStock` hasta que se adopte mediante una decisión.
 - Las solicitudes envían `price` como texto decimal no negativo, sin agrupación de miles ni exponente, y con hasta dos cifras decimales. El backend lo convierte exactamente a centavos; las respuestas usan texto decimal con dos cifras.
-- Las solicitudes de edición aceptarán únicamente campos editables. Aunque el cliente envíe por error `stock`, ese campo nunca debe modificar el stock.
+- Las solicitudes de edición exigirán `name`, `category` y `price`; `description` es opcional y se conserva cuando se omite. Aunque el cliente envíe por error `stock`, ese campo nunca debe modificar el stock.
 - Los códigos de error adoptados en D-016 son `400`/`VALIDATION_ERROR` para datos inválidos, `404`/`NOT_FOUND` para un producto inexistente y `500`/`INTERNAL_SERVER_ERROR` para un fallo inesperado. Los errores internos devuelven un mensaje genérico sin detalles técnicos.
 - El formato común de error adoptado en D-016 es `{ "error": { "code": "...", "message": "...", "fields": {} } }`; `fields` puede omitirse cuando no corresponda.
 - Se utilizarán consultas SQL parametrizadas y no se concatenará texto del usuario en el SQL.
@@ -175,7 +175,7 @@ La regla se define funcionalmente en `docs/spec.md`; su implementación principa
 | Regla de `spec.md` | Implementación principal | Refuerzo o comportamiento complementario |
 |---|---|---|
 | RN-01 — Nombre obligatorio | `products.service` | Frontend indica el campo requerido; SQLite impide valores vacíos o fuera del límite. |
-| RN-02 — Categoría obligatoria | `products.service` | Frontend indica el campo requerido; SQLite aplica restricciones de longitud y no nulidad. |
+| RN-02 — Categoría obligatoria y reutilizable | `products.service` | Frontend indica el campo requerido; SQLite aplica restricciones de longitud y no nulidad. Las categorías equivalentes se canonicalizan, no se rechazan. |
 | RN-03 — Precio válido, no negativo y con hasta dos decimales | `products.service` | Frontend ayuda con el formato; SQLite garantiza `price_cents >= 0`. |
 | RN-04 — Stock entero y no negativo | `products.service` | Frontend valida el formulario; SQLite garantiza `stock >= 0`. |
 | RN-05 — La edición normal no modifica stock | `products.service`, con lista explícita de campos editables | Repository actualiza únicamente nombre, descripción, categoría y precio. |
@@ -186,7 +186,7 @@ La regla se define funcionalmente en `docs/spec.md`; su implementación principa
 | RN-10 — Sumar unidades en stock | `summary.service` | Repository calcula `COALESCE(SUM(stock), 0)`. |
 | RN-11 — Contar productos con stock bajo | `summary.service` y umbral común | Repository cuenta los registros con stock menor o igual al umbral. |
 | RN-12 — Búsqueda parcial por nombre, sin distinguir mayúsculas | `products.service` normaliza el término | Repository realiza una consulta parametrizada con coincidencia parcial. |
-| RN-13 — Filtro por categoría completa, sin distinguir mayúsculas | `products.service` normaliza el filtro | Repository aplica igualdad de categoría de forma insensible a mayúsculas. |
+| RN-13 — Filtro por categoría completa normalizada | `products.service` normaliza el filtro | Repository compara categoría ignorando mayúsculas, tildes y espacios repetidos. |
 | RN-14 — Combinar búsqueda y categoría | `products.service` pasa ambos filtros | Repository los combina con `AND`; si falta uno, no restringe por ese criterio. |
 | RN-15 — Orden alfabético ascendente | Repository | SQL ordena por nombre ascendente. |
 | RN-16 — Confirmación y eliminación | Frontend confirma; service/controller ejecutan la operación y detectan inexistencia | Repository elimina solo el identificador solicitado; cancelar no envía la petición. |

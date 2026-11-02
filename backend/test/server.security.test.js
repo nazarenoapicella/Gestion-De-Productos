@@ -30,7 +30,7 @@ function removeDatabaseFiles(databasePath) {
   }
 }
 
-test("el servidor no sirve archivos fuera del frontend mediante traversal", async () => {
+test("el servidor sirve la interfaz con encabezados de seguridad y bloquea el traversal", async () => {
   const port = 3600 + Math.floor(Math.random() * 1000);
   const databasePath = path.join(__dirname, `.security-${process.pid}-${randomUUID()}.sqlite`);
   const child = spawn(process.execPath, ["src/server.js"], {
@@ -46,6 +46,19 @@ test("el servidor no sirve archivos fuera del frontend mediante traversal", asyn
 
   try {
     await waitForServer(port);
+
+    const pageResponse = await fetch(`http://127.0.0.1:${port}/`);
+    assert.equal(pageResponse.status, 200);
+    assert.match(await pageResponse.text(), /Stock Simple/);
+    assert.equal(pageResponse.headers.get("x-powered-by"), null);
+    assert.equal(pageResponse.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(pageResponse.headers.get("x-frame-options"), "DENY");
+    assert.equal(pageResponse.headers.get("referrer-policy"), "same-origin");
+    assert.match(pageResponse.headers.get("content-security-policy") || "", /default-src 'self'/);
+
+    const stylesheetResponse = await fetch(`http://127.0.0.1:${port}/css/styles.css`);
+    assert.equal(stylesheetResponse.status, 200);
+    assert.match(stylesheetResponse.headers.get("content-type") || "", /text\/css/i);
 
     const traversalTargets = [
       `http://127.0.0.1:${port}/%2E%2E/backend/data/stock-simple.sqlite`,

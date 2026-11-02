@@ -108,6 +108,7 @@ test("POST /api/products crea el producto, normaliza los campos y devuelve el DT
     );
 
     assert.equal(response.status, 201);
+    assert.equal(response.headers.get("cache-control"), "no-store");
     assert.match(response.headers.get("content-type") || "", /application\/json/i);
     assertProductDto(body, {
       name: "Mouse",
@@ -183,9 +184,9 @@ for (const [description, input] of invalidInputs) {
   });
 }
 
-test("POST /api/products permite repetir el nombre y preserva el registro original", async () => {
+test("POST /api/products rechaza un nombre repetido y no crea el producto duplicado", async () => {
   await withApi(async (baseUrl, database) => {
-    const original = productsRepository.create(database, {
+    productsRepository.create(database, {
       name: "Mouse",
       description: "Original",
       category: "Periféricos",
@@ -199,18 +200,24 @@ test("POST /api/products permite repetir el nombre y preserva el registro origin
       validInput,
     );
 
-    assert.equal(response.status, 201);
-    assert.notEqual(body.id, original.id);
-    assertProductDto(body, {
-      name: "Mouse",
-      category: "Periféricos",
-    });
-    assert.deepEqual(productsRepository.findById(database, original.id), original);
+    assertValidationError(response, body);
+    assert.equal(productsRepository.findAll(database).length, 1);
+  });
+});
 
-    const sameNameProducts = productsRepository
-      .findAll(database)
-      .filter((product) => product.name === "Mouse");
-    assert.equal(sameNameProducts.length, 2);
-    assert.notEqual(sameNameProducts[0].id, sameNameProducts[1].id);
+
+test("POST /api/products rechaza cuerpos JSON mayores al límite sin insertar datos", async () => {
+  await withApi(async (baseUrl, database) => {
+    const response = await fetch(`${baseUrl}/api/products`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...validInput, description: "x".repeat(40_000) }),
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 413);
+    assert.equal(body.error.code, "PAYLOAD_TOO_LARGE");
+    assert.equal(typeof body.error.message, "string");
+    assert.deepEqual(productsRepository.findAll(database), []);
   });
 });

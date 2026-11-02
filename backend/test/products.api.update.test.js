@@ -121,7 +121,7 @@ const editInput = {
   price: "1500.00",
 };
 
-test("PUT /api/products/:id edita campos permitidos, ignora stock y devuelve el DTO persistido", async () => {
+test("PUT /api/products/:id edita los datos comerciales y conserva el stock", async () => {
   await withApi(async (baseUrl, database) => {
     const original = createPersistedProduct(database);
     const other = createPersistedProduct(database, {
@@ -150,7 +150,7 @@ test("PUT /api/products/:id edita campos permitidos, ignora stock y devuelve el 
       id: original.id,
       ...editInput,
       price: "1500.00",
-      stock: 5,
+      stock: original.stock,
     });
 
     const persisted = productsRepository.findById(database, original.id);
@@ -160,7 +160,7 @@ test("PUT /api/products/:id edita campos permitidos, ignora stock y devuelve el 
       description: "Mouse inalámbrico actualizado",
       category: "Accesorios",
       price_cents: 150000,
-      stock: 5,
+      stock: original.stock,
       created_at: original.created_at,
       updated_at: body.updatedAt,
     });
@@ -170,7 +170,7 @@ test("PUT /api/products/:id edita campos permitidos, ignora stock y devuelve el 
   });
 });
 
-test("PUT /api/products/:id permite omitir description", async () => {
+test("PUT /api/products/:id permite omitir description y conserva la anterior", async () => {
   await withApi(async (baseUrl, database) => {
     const original = createPersistedProduct(database);
     const { description, ...inputWithoutDescription } = editInput;
@@ -189,12 +189,12 @@ test("PUT /api/products/:id permite omitir description", async () => {
     assertProductDto(body, {
       id: original.id,
       ...inputWithoutDescription,
-      description: null,
+      description: original.description,
       price: "1500.00",
       stock: 5,
     });
     const persisted = productsRepository.findById(database, original.id);
-    assert.equal(persisted.description, null);
+    assert.equal(persisted.description, original.description);
     assert.equal(persisted.price_cents, 150000);
     assert.equal(persisted.stock, 5);
     assert.equal(persisted.name, body.name);
@@ -213,6 +213,9 @@ const invalidUpdates = [
   ["precio no numérico", { price: "abc" }],
   ["precio con más de dos decimales", { price: "1500.505" }],
   ["precio que no se envía como texto", { price: 1500 }],
+  ["nombre nulo", { name: null }],
+  ["categoría nula", { category: null }],
+  ["precio nulo", { price: null }],
 ];
 
 for (const [label, invalidField] of invalidUpdates) {
@@ -242,6 +245,20 @@ for (const [label, invalidField] of invalidUpdates) {
   });
 }
 
+
+test("PUT /api/products/:id exige nombre, categoría y precio", async () => {
+  await withApi(async (baseUrl, database) => {
+    const original = createPersistedProduct(database);
+    for (const field of ["name", "category", "price"]) {
+      const input = { ...editInput };
+      delete input[field];
+      const { response, body } = await putProduct(baseUrl, original.id, input);
+      assertValidationError(response, body);
+      assert.deepEqual(productsRepository.findById(database, original.id), original);
+    }
+  });
+});
+
 test("PUT /api/products/999999 responde 404 NOT_FOUND y no modifica otros productos", async () => {
   await withApi(async (baseUrl, database) => {
     const product = createPersistedProduct(database);
@@ -254,7 +271,10 @@ test("PUT /api/products/999999 responde 404 NOT_FOUND y no modifica otros produc
     });
     const before = productsRepository.findAll(database);
 
-    const { response, body, text } = await putProduct(baseUrl, 999999, editInput);
+    const { response, body, text } = await putProduct(baseUrl, 999999, {
+      ...editInput,
+      stock: 99,
+    });
 
     assert.equal(
       response.status,

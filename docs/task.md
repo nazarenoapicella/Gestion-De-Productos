@@ -43,7 +43,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
   - **RN / HU:** RN-09, RN-16, RN-17; soporte para HU-01, HU-02, HU-03 y HU-04.
   - **Depende de:** T-01.
   - **Terminada cuando se compruebe:**
-    1. Crear dos productos llamados `Mouse` devuelve dos identificadores diferentes y ambos registros siguen disponibles.
+    1. El repositorio puede persistir y recuperar registros por identificador sin mezclar sus datos; la regla de nombre único se valida en el servicio/API, no dentro del repositorio.
     2. Obtener cada identificador devuelve únicamente el producto correspondiente.
     3. Actualizar el precio del primer producto no modifica el segundo producto.
     4. Eliminar el primer producto deja al segundo disponible; intentar obtener el identificador eliminado devuelve “no encontrado” y no elimina otros registros.
@@ -80,7 +80,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 
 - [x] **T-05 — Implementar búsqueda, filtro y orden del listado**
   - **Agente:** Backend.
-  - **Qué hace:** ofrecer la consulta de productos ordenada alfabéticamente por nombre, con búsqueda parcial sin distinguir mayúsculas y minúsculas y filtro por categoría completa. La búsqueda y el filtro deben combinarse.
+  - **Qué hace:** ofrecer la consulta de productos ordenada alfabéticamente por nombre, con búsqueda parcial sin distinguir mayúsculas y minúsculas y filtro por categoría completa normalizada (sin distinguir mayúsculas, tildes ni espacios repetidos). La búsqueda y el filtro deben combinarse.
   - **Archivos previstos:** `backend/src/repositories/products.repository.js`, `backend/src/services/products.service.js` y pruebas del listado.
   - **RN / HU:** RN-12, RN-13, RN-14, RN-15; HU-01 y HU-05.
   - **Depende de:** T-02 y T-03.
@@ -339,3 +339,4 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 - [cambio] 2026-10-28 — Se crea el backlog inicial, ordenado por dependencias, con criterios de finalización verificables derivados de las reglas, historias de usuario y casos límite de `spec.md`.
 - [cambio] 2026-10-28 — Se alinean el criterio de precio de T-03 y el ejemplo de T-08 con D-015, que define `price` como texto decimal exacto.
 - [cambio] 2026-10-28 — Se cierra T-18 con ajuste de stock en la interfaz y pruebas ejecutadas en frontend y backend, manteniendo la separación de responsabilidades entre `api.js` y `app.js`.
+- [cambio] 2026-11-02 — Se corrigen criterios contradictorios sobre nombre único, categorías reutilizables y edición separada del stock; se amplían los casos de validación de la API.

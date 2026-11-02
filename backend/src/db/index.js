@@ -37,10 +37,17 @@ function openDatabase(databasePath = process.env.DATABASE_PATH || defaultDatabas
   const database = new DatabaseSync(resolvedPath);
   try {
     database.exec("PRAGMA busy_timeout = 5000");
-    database.function(
-      "unicode_lower",
-      { deterministic: true },
-      (value) => value.toLowerCase(),
+    database.exec("PRAGMA foreign_keys = ON");
+    database.function("unicode_lower", { deterministic: true }, (value) =>
+      String(value ?? "").toLocaleLowerCase("es-ES"),
+    );
+    database.function("normalize_text", { deterministic: true }, (value) =>
+      String(value ?? "")
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .toLocaleLowerCase("es-ES"),
     );
     database.exec(schema);
     return database;
