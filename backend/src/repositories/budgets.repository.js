@@ -29,7 +29,7 @@ function createBudget(database, items) {
     const now = new Date().toISOString();
     const budgetResult = database.prepare(
       `INSERT INTO budgets (status, total_cents, created_at, resolved_at)
-       VALUES ('pending', 0, ?, NULL)`,
+       VALUES ('issued', 0, ?, NULL)`,
     ).run(now);
     const budgetId = Number(budgetResult.lastInsertRowid);
     const findProduct = database.prepare(
@@ -117,7 +117,7 @@ function resolveBudget(database, id, status) {
     if (!budget) {
       throw repositoryError("No se encontró el presupuesto solicitado.", "BUDGET_NOT_FOUND", 404);
     }
-    if (budget.status !== "pending") {
+    if (budget.status !== "issued") {
       throw repositoryError(
         "Este presupuesto ya fue resuelto y no puede modificarse nuevamente.",
         "BUDGET_ALREADY_RESOLVED",
@@ -154,7 +154,7 @@ function resolveBudget(database, id, status) {
 
     database.prepare(
       `UPDATE budgets SET status = ?, resolved_at = ?
-       WHERE id = ? AND status = 'pending'`,
+       WHERE id = ? AND status = 'issued'`,
     ).run(status, new Date().toISOString(), id);
     database.exec("COMMIT");
     transactionOpen = false;

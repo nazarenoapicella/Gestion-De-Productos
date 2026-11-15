@@ -1,39 +1,43 @@
-# Preguntas abiertas
+# Decisiones de alcance futuro — Stock Simple
 
-Este archivo separa los asuntos no resueltos del alcance que ya puede desarrollarse. Las preguntas de esta lista **no bloquean la implementación del MVP** porque tienen una decisión temporal documentada o pertenecen a versiones futuras. No deben incorporarse al sistema sin una decisión explícita.
+**Estado del documento:** CERRADO PARA EL MVP.  
+**Estado de las decisiones:** todas las cuestiones de esta lista están resueltas como exclusiones explícitas del alcance de esta versión. No representan tareas abiertas ni requisitos incompletos.
 
-## Pendientes para evaluar en versiones futuras
+Este documento registra funcionalidades que fueron consideradas durante el análisis y deliberadamente excluidas del MVP. El comportamiento actual queda definido por `spec.md` y `decisiones.md`.
 
-### P-001 — ¿Se necesita inicio de sesión?
+## Funciones excluidas del MVP
 
-- **Estado:** fuera del MVP; pendiente para una versión que necesite uso remoto o varios operadores.
-- **Impacto:** autenticación, gestión de sesiones, recuperación de contraseñas, seguridad y posibles roles.
-- **Resolución provisional:** el MVP se limita al uso local o controlado. No se puede publicar abiertamente ni usar en producción con datos reales sin resolver este punto.
+### P-001 — Autenticación y gestión de usuarios
 
-### P-002 — ¿Conviene conservar un historial de movimientos de stock?
+- **Decisión:** el MVP no incluye inicio de sesión, roles ni gestión de sesiones.
+- **Alcance vigente:** uso local o controlado, sin exposición pública ni tratamiento de datos reales de producción.
+- **Motivo de exclusión:** autenticación, autorización, recuperación de contraseñas y gestión de sesiones conforman un alcance de seguridad separado.
 
-- **Estado:** fuera del MVP.
-- **Alternativa a evaluar:** registrar fecha, producto, tipo de movimiento, cantidad y motivo. Esto permitiría explicar cómo se llegó al stock actual, pero agrega datos, pantallas y reglas de consistencia.
+### P-002 — Historial de movimientos de stock
 
-### P-003 — ¿Hace falta importar o exportar productos?
+- **Decisión:** el MVP conserva el stock actual y el historial comercial de presupuestos, pero no un libro de movimientos de stock.
+- **Alcance vigente:** no se registra cada ingreso, egreso, ajuste, fecha y motivo como entidad independiente.
 
-- **Estado:** fuera del MVP.
-- **Alternativa a evaluar:** exportación CSV para respaldo o análisis y, más adelante, importación validada. La importación requiere definir cómo resolver filas inválidas y productos duplicados.
+### P-003 — Importación y exportación de productos
 
-### P-004 — ¿El umbral de stock bajo debe configurarse por producto?
+- **Decisión:** el MVP no incorpora importación ni exportación CSV.
+- **Alcance vigente:** la administración de productos se realiza desde la interfaz y la API implementadas.
 
-- **Estado:** fuera del MVP.
-- **Resolución provisional:** el umbral general y fijo es de cinco unidades o menos para todos los productos.
+### P-004 — Umbral de stock bajo configurable por producto
 
-### P-005 — ¿Las categorías deberían ser entidades administrables?
+- **Decisión:** se utiliza un único umbral general fijo.
+- **Alcance vigente:** un producto se considera con stock bajo cuando tiene cinco unidades o menos.
 
-- **Estado:** fuera del MVP.
-- **Resolución provisional:** la categoría es texto en el producto. No existe alta, edición o eliminación independiente de categorías.
+### P-005 — Administración independiente de categorías
 
-## Criterio para cerrar una pregunta
+- **Decisión:** las categorías son textos normalizados asociados a los productos, no una entidad administrable independiente.
+- **Alcance vigente:** no existen pantallas ni endpoints separados para crear, editar o eliminar categorías.
 
-Cuando se decida incorporar una de estas funciones, registrar la decisión en `decisiones.md`, actualizar `spec.md`, revisar el alcance y añadir los criterios de aceptación correspondientes. Si una pregunta resulta necesaria para entender un requisito actual, entonces sí debe resolverse antes de implementar ese requisito.
+## Cierre
+
+Las cinco decisiones están tomadas y documentadas. Cualquier incorporación futura constituirá una ampliación de alcance independiente, que deberá especificarse y aprobarse como una nueva versión. No queda ninguna decisión por resolver para la entrega actual.
 
 ## Historial de cambios
 
-- [cambio] 2026-10-22 — Se registran cuestiones para versiones futuras sin dejar bloqueado el alcance inicial.
+- [cambio] 2026-10-22 — Se registran funciones consideradas y excluidas del alcance inicial.
+- [cambio] 2026-11-15 — Se cierra el documento como catálogo de decisiones de alcance futuro; se elimina cualquier formulación que pudiera interpretarse como trabajo pendiente del MVP.

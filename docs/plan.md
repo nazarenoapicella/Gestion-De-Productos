@@ -1,9 +1,9 @@
 # Plan técnico — Stock Simple
 
-> **Estado:** propuesta técnica previa a la implementación.  
+> **Estado:** arquitectura implementada y vigente; esta documentación describe el sistema construido.  
 > **Responsable de elaboración:** agente arquitecto.  
 > **Alcance:** MVP definido en [`spec.md`](spec.md).  
-> **Última actualización:** 2026-10-28.
+> **Última actualización:** 2026-11-15.
 
 Este documento explica cómo se propone construir el sistema a partir de los requisitos actuales. No reemplaza la especificación funcional ni autoriza funciones que estén fuera del MVP. Si el plan contradice una regla de negocio de `spec.md` o una decisión adoptada en `decisiones.md`, se debe registrar la contradicción y resolverla antes de programar.
 
@@ -39,7 +39,7 @@ Base de datos: stock-simple.sqlite
 
 - **Routes:** relacionan el método y la ruta HTTP con el controller correspondiente. No contienen reglas de negocio ni consultas SQL.
 - **Controller:** lee parámetros, query strings y cuerpos JSON; llama al service y traduce el resultado a códigos HTTP y JSON. No calcula el stock ni decide si una operación de negocio es válida.
-- **Service:** centraliza las reglas de negocio, valida y normaliza datos, coordina operaciones y determina resultados como producto inexistente o stock insuficiente. Es la ubicación principal de las reglas RN-01 a RN-18.
+- **Service:** centraliza las reglas de negocio, valida y normaliza datos, coordina operaciones y determina resultados como producto inexistente o stock insuficiente. Es la ubicación principal de las reglas RN-01 a RN-18; las reglas de presupuesto RN-19 a RN-22 se coordinan con el repositorio de presupuestos para garantizar atomicidad.
 - **Repository:** concentra las consultas SQL y la persistencia. Usa parámetros SQL, devuelve datos o resultados explícitos y no construye mensajes de interfaz.
 - **Módulo de base de datos:** configura la conexión y asegura que el esquema inicial exista. No contiene reglas propias del comercio.
 - **Frontend:** muestra los datos y permite operar el sistema. Puede validar campos para facilitar el uso, pero el backend es siempre la autoridad final.
@@ -48,12 +48,12 @@ Las capas deben ser pequeñas. No se crearán interfaces genéricas, patrones ad
 
 ### 1.3 Estructura propuesta
 
-La siguiente es la estructura objetivo para cuando comience la implementación. No implica que ya exista código ejecutable.
+La estructura de referencia se contrasta con el árbol real del repositorio. Los nombres de carpetas y archivos listados en README y este plan deben mantenerse sincronizados con la implementación.
 
 ```text
 stock-simple/
 ├── README.md
-├── agents.md
+├── AGENTS.md
 ├── .gitignore
 ├── docs/
 │   ├── ideas.md
@@ -61,15 +61,18 @@ stock-simple/
 │   ├── preguntas-abiertas.md
 │   ├── glosario.md
 │   ├── spec.md
-│   └── plan.md
+│   ├── plan.md
+│   ├── tasks.md
+│   ├── pruebas-manuales.md
+│   └── INFORME-VERIFICACION.md
 ├── rules/
-│   ├── analista-funcional.md
-│   ├── arquitectura.md
-│   ├── backend.md
-│   ├── base-de-datos.md
-│   ├── frontend.md
-│   ├── testing-qa.md
-│   └── documentacion.md
+│   ├── analista-funcional.mdc
+│   ├── arquitectura.mdc
+│   ├── backend.mdc
+│   ├── base-de-datos.mdc
+│   ├── frontend.mdc
+│   ├── testing-qa.mdc
+│   └── documentacion.mdc
 ├── backend/
 │   ├── .env.example
 │   └── src/
@@ -81,13 +84,18 @@ stock-simple/
 │       ├── repositories/
 │       └── db/
 └── frontend/
+    ├── package.json
+    ├── package-lock.json
     ├── index.html
+    ├── test/
     ├── css/
     │   └── styles.css
     └── js/
         ├── api.js
         └── app.js
 ```
+
+Las pruebas automatizadas de backend están en `backend/test/`; las de interfaz están en `frontend/test/`.
 
 `app.js` configurará Express y sus rutas; `server.js` iniciará el servidor. `api.js` centralizará las peticiones desde el frontend. Se pueden ajustar nombres de archivos durante la implementación, siempre que se mantengan las responsabilidades y el alcance definidos.
 
@@ -221,7 +229,7 @@ El backend tendrá un manejo centralizado de errores de Express. Los errores esp
 
 ### 6.6 Mantener búsquedas seguras y correctas
 
-Los filtros se construirán con consultas parametrizadas. La búsqueda por nombre será parcial, el filtro de categoría será exacto y ambos se combinarán con `AND`. El orden por nombre se resolverá en SQL. No se agregará paginación ni optimización prematura porque no son necesarias para el alcance actual.
+Los filtros se construyen con consultas parametrizadas. La búsqueda por nombre será parcial, el filtro de categoría será exacto y ambos se combinarán con `AND`. El orden por nombre se resolverá en SQL. No se agregará paginación ni optimización prematura porque no son necesarias para el alcance actual.
 
 ### 6.7 Concurrencia, tiempo y correo electrónico
 
@@ -259,13 +267,50 @@ No se debe empezar por generar toda la aplicación en un único prompt. Cada eta
 
 - [`spec.md`](spec.md): contrato funcional y criterios de aceptación.
 - [`decisiones.md`](decisiones.md): decisiones adoptadas de producto y tecnología.
-- [`preguntas-abiertas.md`](preguntas-abiertas.md): posibles funciones de versiones futuras.
+- [`preguntas-abiertas.md`](preguntas-abiertas.md): decisiones de alcance futuro ya cerradas para el MVP.
 - [`glosario.md`](glosario.md): términos del dominio.
-- [`../agents.md`](../agents.md): instrucciones generales para los agentes.
-- [`../rules/arquitectura.md`](../rules/arquitectura.md): reglas del agente arquitecto.
+- [`../AGENTS.md`](../AGENTS.md): instrucciones generales para los agentes.
+- [`../rules/arquitectura.mdc`](../rules/arquitectura.mdc): reglas del agente arquitecto.
 
 ## Historial de cambios
 
 - [cambio] 2026-10-28 — Se crea el plan técnico previo a la implementación: capas, persistencia, modelo de datos, API, ubicación de reglas, riesgos y dudas técnicas.
 - [cambio] 2026-10-28 — Se actualiza el transporte de `price` a texto decimal exacto y se documenta el límite técnico de centavos seguros según D-015.
 - [cambio] 2026-10-28 — Se alinea el DTO y el formato de errores de API con la decisión adoptada D-016.
+- [cambio] 2026-11-15 — Se incorpora la migración transaccional del estado de presupuesto heredado al estado vigente `issued`.
+
+
+## 9. Estado implementado y reglas incorporadas después del plan inicial
+
+Esta sección prevalece sobre cualquier frase histórica del documento que describa el proyecto como una propuesta previa a la implementación. El sistema implementado incluye catálogo de productos, stock, resumen, presupuestos, reservas transaccionales, PDF e historial de resolución.
+
+### 9.1 Reglas adicionales de presupuestos
+
+- Un presupuesto contiene entre 1 y 50 líneas de productos distintos. La cantidad por línea es un entero seguro mayor que cero.
+- La creación se ejecuta en una transacción `BEGIN IMMEDIATE`: valida existencia y stock, captura nombre y precio unitario, descuenta stock, guarda líneas y total, y confirma todo junto. Si cualquier línea falla, se revierte la operación completa.
+- El importe de cada línea y el total se calculan con `BigInt` y deben caber en `Number.MAX_SAFE_INTEGER` centavos.
+- El presupuesto nace `issued` (emitido). Los estados válidos son `issued`, `paid` y `rejected`; la interfaz muestra **Emitido**, **Pagado** o **Rechazado**. Solo puede resolverse una vez como `paid` o `rejected`. `paid` mantiene el stock reservado; `rejected` devuelve exactamente las cantidades capturadas, dentro de una transacción.
+- Al abrir una base SQLite anterior, la inicialización migra `pending` a `issued` mediante reconstrucción transaccional de `budgets`, preservando los IDs, los datos históricos, las líneas y las relaciones de clave foránea.
+- Los productos asociados a presupuestos emitidos no pueden eliminarse. El detalle histórico no depende del nombre ni precio actual del catálogo.
+- El PDF se genera en backend a partir de la fotografía persistida del presupuesto.
+
+### 9.2 Diferencias vigentes respecto del plan inicial
+
+- El stock disponible se edita dentro del formulario de edición del producto. Los endpoints de ajuste relativo se mantienen por compatibilidad y cobertura de API, pero no se exponen como acción separada en la interfaz.
+- Las categorías son texto reutilizable normalizado; no existe administración independiente de categorías.
+- La aplicación no incluye autenticación. Es de uso local o controlado y no debe exponerse públicamente con datos reales.
+- El backend requiere Node.js 22.13.0 o superior y utiliza `node:sqlite`; no necesita un paquete nativo de SQLite.
+
+### 9.3 Criterios técnicos de aceptación implementados
+
+- Todas las entradas se validan en backend; frontend valida solo para mejorar la experiencia.
+- Los textos se miden en puntos de código Unicode, coherentes con `length()` de SQLite para los límites definidos.
+- Las consultas SQL reciben parámetros; el orden incluye `id ASC` como desempate estable.
+- Los cambios de stock y las transiciones de presupuestos se protegen con transacciones y condiciones SQL.
+- Las respuestas de API no se cachean y se aplican cabeceras de seguridad básicas.
+
+## 10. Estado de pruebas y cierre
+
+Las tareas del backlog, las suites automatizadas completas de backend y frontend, las verificaciones manuales y el recorrido integral se consideran completados y aprobados según la confirmación del equipo. La suite frontend se ejecuta desde `frontend/` con `npm test`; la suite backend desde `backend/` con `npm test`. El informe `docs/INFORME-VERIFICACION.md` consolida el resultado de aceptación del equipo y las verificaciones técnicas adicionales de esta revisión. No quedan acciones abiertas dentro del alcance del MVP.
+
+- [cambio] 2026-11-15 — Se incorpora bloqueo de acceso HTTP a los archivos fuente de pruebas bajo `/test/`; las pruebas permanecen en el repositorio pero no se sirven como contenido estático.

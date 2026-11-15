@@ -144,14 +144,14 @@ function deleteById(database, id) {
   database.exec("BEGIN IMMEDIATE");
   let transactionOpen = true;
   try {
-    const pendingBudget = database.prepare(
+    const issuedBudget = database.prepare(
       `SELECT 1 AS found FROM budget_items bi
        INNER JOIN budgets b ON b.id = bi.budget_id
-       WHERE bi.product_id = ? AND b.status = 'pending' LIMIT 1`,
+       WHERE bi.product_id = ? AND b.status = 'issued' LIMIT 1`,
     ).get(id);
-    if (pendingBudget) {
+    if (issuedBudget) {
       const error = new Error(
-        "No se puede eliminar este producto porque tiene stock reservado en un presupuesto pendiente.",
+        "No se puede eliminar este producto porque tiene stock reservado en un presupuesto emitido.",
       );
       error.code = "PRODUCT_RESERVED";
       error.statusCode = 409;

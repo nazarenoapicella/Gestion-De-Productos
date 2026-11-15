@@ -1,0 +1,8 @@
+{
+  "name": "stock-simple-frontend-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pruebas automatizadas del frontend de Stock Simple",
+  "engines": { "node": ">=22.13.0" },
+  "scripts": { "test": "node --test" }
+}

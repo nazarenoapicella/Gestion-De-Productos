@@ -32,8 +32,8 @@ Los siguientes términos tienen un significado concreto dentro de Stock Simple. 
 
 ### Reserva de stock
 
-Unidades que se descuentan del stock disponible al generar un presupuesto pendiente. Si se paga, permanecen descontadas; si se rechaza, se devuelven una sola vez.
+Unidades que se descuentan del stock disponible al generar un presupuesto emitido. Si se paga, permanecen descontadas; si se rechaza, se devuelven una sola vez.
 
 ### Presupuesto
 
-Documento comercial que conserva los productos, las cantidades, los precios y el total calculados al momento de su emisión. Puede estar pendiente, pagado o rechazado.
+Documento comercial que conserva los productos, las cantidades, los precios y el total calculados al momento de su emisión. Sus estados son `issued` (Emitido), `paid` (Pagado) y `rejected` (Rechazado).

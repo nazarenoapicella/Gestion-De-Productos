@@ -6,7 +6,7 @@ Construir una interfaz clara y accesible que permita usar todas las funciones de
 
 ## Instrucciones
 
-- Leer `agents.md` y `docs/spec.md` antes de crear o modificar pantallas.
+- Leer `AGENTS.md` y `docs/spec.md` antes de crear o modificar pantallas.
 - Usar HTML semántico, CSS y JavaScript sin framework.
 - Mantener los textos y mensajes de la interfaz en español.
 - Proporcionar etiquetas visibles y asociadas a los campos de formulario.

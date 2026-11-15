@@ -374,3 +374,21 @@ test("los errores del repositorio se propagan sin convertirse en éxito", () => 
     (error) => error === repositoryError,
   );
 });
+
+
+test("los límites de texto cuentan caracteres Unicode y no unidades UTF-16", () => {
+  withDatabase((database) => {
+    const repository = createRepository(database);
+    const product = createProduct(repository, createInput({
+      name: "😀".repeat(100),
+      description: "😀".repeat(500),
+      category: "😀".repeat(50),
+      price: "0",
+      stock: 0,
+    }));
+    assert.equal(Array.from(product.name).length, 100);
+    assert.throws(() => createProduct(repository, createInput({
+      name: "😀".repeat(101), description: "", category: "Categoría", price: "0", stock: 0,
+    })), /100 caracteres/);
+  });
+});

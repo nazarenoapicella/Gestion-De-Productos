@@ -20,14 +20,16 @@ test('la interfaz tiene un apartado de presupuestos con selección de producto y
   assert.match(html, /Inventario[\s\S]*Presupuestos/i);
 });
 
-test('la interfaz separa presupuestos pendientes del historial de pagados y rechazados', () => {
+test('la interfaz separa presupuestos emitidos del historial de pagados y rechazados', () => {
   const html = read('index.html');
   for (const id of [
-    'pending-budgets-list', 'pending-budgets-empty', 'budget-history-list',
+    'issued-budgets-list', 'issued-budgets-empty', 'budget-history-list',
     'budget-history-table', 'budget-success', 'budgets-error',
   ]) {
     assert.match(html, new RegExp(`\\bid=["']${id}["']`, 'i'));
   }
+  assert.match(html, /Presupuestos emitidos/i);
+  assert.doesNotMatch(html, /presupuesto(?:s)? pendiente(?:s)?/i);
   assert.match(html, /Pagado/i);
   assert.match(html, /Rechazado/i);
   assert.match(html, /(stock se reserva|unidades se reservan)/i);
@@ -44,6 +46,7 @@ test('el frontend integra creación, resolución y descarga del presupuesto medi
   assert.match(app, /availableStock|product\.stock/i);
   assert.match(app, /createBudget\s*\(/i);
   assert.match(app, /resolveBudget\s*\(/i);
+  assert.match(app, /budget\.status === \"issued\"/i);
   assert.match(app, /URL\.createObjectURL/i);
 });
 

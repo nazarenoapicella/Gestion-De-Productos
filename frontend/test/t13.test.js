@@ -282,13 +282,13 @@ async function runAppWithProducts(productsOrError, defer = false) {
   let resolveProducts;
   let rejectProducts;
   let getProductsCalls = 0;
-  const pending = new Promise((resolve, reject) => {
+  const deferredPromise = new Promise((resolve, reject) => {
     resolveProducts = resolve;
     rejectProducts = reject;
   });
   const getProducts = () => {
     getProductsCalls += 1;
-    if (defer) return pending;
+    if (defer) return deferredPromise;
     if (productsOrError instanceof Error) return Promise.reject(productsOrError);
     return Promise.resolve(productsOrError);
   };

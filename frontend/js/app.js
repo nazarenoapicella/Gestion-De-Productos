@@ -152,10 +152,10 @@ function updateCategoryOptions(products, categorySelects = []) {
 
 function validateProductData(product, { includeStock = false } = {}) {
   if (!product.name || !product.name.trim()) return "El nombre es obligatorio.";
-  if (product.name.trim().length > 100) return "El nombre no puede superar 100 caracteres.";
+  if (Array.from(product.name.trim()).length > 100) return "El nombre no puede superar 100 caracteres.";
   if (!product.category || !product.category.trim()) return "La categoría es obligatoria.";
-  if (product.category.trim().length > 50) return "La categoría no puede superar 50 caracteres.";
-  if (product.description.length > 500) return "La descripción no puede superar 500 caracteres.";
+  if (Array.from(product.category.trim()).length > 50) return "La categoría no puede superar 50 caracteres.";
+  if (Array.from(product.description).length > 500) return "La descripción no puede superar 500 caracteres.";
 
   if (typeof product.price !== "string" || !/^\d+(?:\.\d{1,2})?$/.test(product.price)) {
     return "El precio debe ser un número no negativo con hasta dos decimales. Usá punto para los decimales.";
@@ -354,15 +354,15 @@ function initializeBudgetsPage({ refreshInventory, refreshSummary }) {
   const budgetSuccess = document.getElementById("budget-success");
   const budgetsLoading = document.getElementById("budgets-loading");
   const budgetsError = document.getElementById("budgets-error");
-  const pendingEmpty = document.getElementById("pending-budgets-empty");
-  const pendingTable = document.getElementById("pending-budgets-table");
-  const pendingBody = document.getElementById("pending-budgets-list");
+  const issuedEmpty = document.getElementById("issued-budgets-empty");
+  const issuedTable = document.getElementById("issued-budgets-table");
+  const issuedBody = document.getElementById("issued-budgets-list");
   const historyEmpty = document.getElementById("budget-history-empty");
   const historyTable = document.getElementById("budget-history-table");
   const historyBody = document.getElementById("budget-history-list");
-  const pendingCount = document.getElementById("pending-budget-count");
+  const issuedCount = document.getElementById("issued-budget-count");
 
-  if (!productSelect || !generateButton || !pendingBody || !historyBody) return;
+  if (!productSelect || !generateButton || !issuedBody || !historyBody) return;
 
   let availableProducts = [];
   let draftItems = [];
@@ -516,7 +516,7 @@ function initializeBudgetsPage({ refreshInventory, refreshSummary }) {
   function appendStatusBadge(status) {
     const badge = document.createElement("span");
     badge.className = `budget-status budget-status--${status}`;
-    badge.textContent = status === "paid" ? "Pagado" : status === "rejected" ? "Rechazado" : "Pendiente";
+    badge.textContent = status === "paid" ? "Pagado" : status === "rejected" ? "Rechazado" : "Emitido";
     return badge;
   }
 
@@ -553,13 +553,13 @@ function initializeBudgetsPage({ refreshInventory, refreshSummary }) {
     setVisible(budgetsError, false);
     try {
       const budgets = await getBudgets();
-      const pending = budgets.filter((budget) => budget.status === "pending");
+      const issued = budgets.filter((budget) => budget.status === "issued");
       const history = budgets.filter((budget) => budget.status === "paid" || budget.status === "rejected");
-      pendingBody.replaceChildren();
+      issuedBody.replaceChildren();
       historyBody.replaceChildren();
-      pendingCount.textContent = `${pending.length} ${pending.length === 1 ? "pendiente" : "pendientes"}`;
+      issuedCount.textContent = `${issued.length} ${issued.length === 1 ? "emitido" : "emitidos"}`;
 
-      for (const budget of pending) {
+      for (const budget of issued) {
         const row = document.createElement("tr");
         row.appendChild(createTextCell(`#${String(budget.id).padStart(5, "0")}`));
         row.appendChild(createTextCell(formatBudgetDate(budget.createdAt)));
@@ -584,7 +584,7 @@ function initializeBudgetsPage({ refreshInventory, refreshSummary }) {
         actions.append(paidButton, rejectedButton);
         actionsCell.appendChild(actions);
         row.appendChild(actionsCell);
-        pendingBody.appendChild(row);
+        issuedBody.appendChild(row);
       }
 
       for (const budget of history) {
@@ -601,8 +601,8 @@ function initializeBudgetsPage({ refreshInventory, refreshSummary }) {
         historyBody.appendChild(row);
       }
 
-      setVisible(pendingEmpty, pending.length === 0);
-      setVisible(pendingTable, pending.length > 0);
+      setVisible(issuedEmpty, issued.length === 0);
+      setVisible(issuedTable, issued.length > 0);
       setVisible(historyEmpty, history.length === 0);
       setVisible(historyTable, history.length > 0);
       return true;
@@ -694,7 +694,7 @@ function initializeBudgetsPage({ refreshInventory, refreshSummary }) {
       await refreshInventory();
       await refreshSummary();
       showBudgetSuccess(
-        `Se generó el presupuesto #${String(budget.id).padStart(5, "0")}${pdfDownloaded ? " y se descargó el PDF." : ". Podés descargar el PDF desde el listado de pendientes."}`,
+        `Se generó el presupuesto #${String(budget.id).padStart(5, "0")}${pdfDownloaded ? " y se descargó el PDF." : ". Podés descargar el PDF desde el listado de emitidos."}`,
       );
       if (!refreshed) showBudgetSuccess(`El presupuesto #${budget.id} se generó, pero no se pudo actualizar el listado.`);
     } catch (error) {
@@ -752,7 +752,7 @@ function initializeInventoryPage() {
   let editingProductId = null;
   let activePanel = null;
   let lastFilterKey = null;
-  let pendingFilterKey = null;
+  let queuedFilterKey = null;
 
   function toggleModal(openPanel) {
     const panels = [createPanel, editPanel];
@@ -788,12 +788,12 @@ function initializeInventoryPage() {
   function applyFilters() {
     const filters = currentFilters();
     const filterKey = `${filters.search}\u0000${filters.category}`;
-    if (filterKey === lastFilterKey || filterKey === pendingFilterKey) return;
-    pendingFilterKey = filterKey;
+    if (filterKey === lastFilterKey || filterKey === queuedFilterKey) return;
+    queuedFilterKey = filterKey;
     lastFilterKey = null;
     loadInventory(showEditForm, removeProduct, filters).then((refreshed) => {
-      if (pendingFilterKey !== filterKey) return;
-      pendingFilterKey = null;
+      if (queuedFilterKey !== filterKey) return;
+      queuedFilterKey = null;
       if (refreshed) lastFilterKey = filterKey;
     });
   }
@@ -1035,10 +1035,10 @@ function initializeInventoryPage() {
 
   const initialFilters = currentFilters();
   const initialFilterKey = `${initialFilters.search}\u0000${initialFilters.category}`;
-  pendingFilterKey = initialFilterKey;
+  queuedFilterKey = initialFilterKey;
   loadInventory(showEditForm, removeProduct, initialFilters, true).then((refreshed) => {
-    if (pendingFilterKey !== initialFilterKey) return;
-    pendingFilterKey = null;
+    if (queuedFilterKey !== initialFilterKey) return;
+    queuedFilterKey = null;
     if (refreshed) lastFilterKey = initialFilterKey;
   });
   loadSummary();

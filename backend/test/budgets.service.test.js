@@ -53,7 +53,7 @@ test("crea presupuesto con precios históricos y reserva stock", () => {
     const budget = budgetsService.createBudget(repository, {
       items: [{ productId: product.id, quantity: 3 }],
     });
-    assert.equal(budget.status, "pending");
+    assert.equal(budget.status, "issued");
     assert.equal(budget.total_cents, 450297);
     assert.equal(budget.items[0].product_name, "Monitor");
     assert.equal(budget.items[0].unit_price_cents, 150099);
@@ -118,7 +118,7 @@ test("valida cantidades, IDs, líneas duplicadas y estados", () => {
     ]) {
       assert.throws(() => budgetsService.createBudget(repository, { items }), /./);
     }
-    assert.throws(() => budgetsService.resolveBudget(repository, 1, { status: "pending" }), /./);
+    assert.throws(() => budgetsService.resolveBudget(repository, 1, { status: "issued" }), /./);
     assert.equal(productsRepository.findById(database, product.id).stock, 5);
     assert.equal(repository.listBudgets().length, 0);
   });

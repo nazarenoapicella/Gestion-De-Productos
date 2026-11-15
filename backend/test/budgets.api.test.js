@@ -76,7 +76,7 @@ test("crear presupuesto descuenta stock, conserva importes y genera un PDF váli
     ]);
 
     assert.equal(response.status, 201);
-    assert.equal(body.status, "pending");
+    assert.equal(body.status, "issued");
     assert.equal(body.total, "2680.97");
     assert.equal(body.items.length, 2);
     assert.equal(body.items[0].productName, "Teclado mecánico");
@@ -176,7 +176,7 @@ test("rechaza cantidades inválidas y stock insuficiente sin reservar parcialmen
   });
 });
 
-test("no permite eliminar productos con reservas pendientes y conserva la fotografía del presupuesto", async () => {
+test("no permite eliminar productos con reservas activas y conserva la fotografía del presupuesto", async () => {
   await withApi(async (baseUrl, database) => {
     const product = createProduct(database, { name: "Router Wi-Fi", price: 40000, stock: 4 });
     const created = await createBudgetRequest(baseUrl, [{ productId: product.id, quantity: 2 }]);

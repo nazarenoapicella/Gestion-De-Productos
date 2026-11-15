@@ -144,7 +144,9 @@ La pantalla principal y el listado se implementan antes que las operaciones de i
 
 Al crear un presupuesto se reserva inmediatamente el stock dentro de una transacción SQLite, junto con el presupuesto y sus líneas. Los datos históricos (nombre de producto, precio unitario, cantidad y subtotal) se guardan como fotografía independiente del catálogo. El PDF se genera desde esos datos persistidos, no desde el navegador.
 
-Los presupuestos nuevos quedan `pending`. Al resolver como `paid`, el presupuesto desaparece de pendientes y permanece en el historial; no se modifica el stock porque ya fue descontado al crear la reserva. Al resolver como `rejected`, se devuelven las cantidades reservadas y se mueve el presupuesto al historial. Las transiciones solo se pueden realizar una vez. Un producto con reservas pendientes no se puede eliminar.
+Los presupuestos nuevos quedan `issued` (emitidos). El contrato de estados es `issued`, `paid` y `rejected`; la interfaz presenta el primer estado como **Emitido** y no utiliza el rótulo **Pendiente**. Al resolver como `paid`, el presupuesto desaparece de emitidos y permanece en el historial; no se modifica el stock porque ya fue descontado al crear la reserva. Al resolver como `rejected`, se devuelven las cantidades reservadas y se mueve el presupuesto al historial. Las transiciones solo se pueden realizar una vez. Un producto con reservas activas no se puede eliminar.
+
+Para conservar la compatibilidad con las bases SQLite existentes, al abrir una base anterior se migra el valor legado `pending` a `issued`. La migración reconstruye la tabla con el nuevo `CHECK`, conserva identificadores, fechas, importes, estados resueltos y líneas, y mantiene activa la clave foránea de `budget_items`.
 
 **Motivo:** impedir sobreventa, evitar que una misma reserva se devuelva dos veces y preservar el documento comercial emitido aunque el catálogo cambie.
 
@@ -156,3 +158,15 @@ Los presupuestos nuevos quedan `pending`. Al resolver como `paid`, el presupuest
 - [cambio] 2026-10-28 — D-017 establece la implementación incremental de la interfaz y evita presentar acciones todavía no operativas.
 - [cambio] 2026-11-02 — D-018 adopta el flujo de presupuestos con reserva, PDF e historial de estados pagado/rechazado.
 - [cambio] 2026-11-02 — Se confirma que las categorías son reutilizables y se canonicalizan; se integra la edición del stock disponible en el formulario de edición del producto y se retira la acción independiente de la interfaz.
+- [cambio] 2026-11-15 — El estado operativo de los presupuestos se denomina `issued` (Emitido); se incorpora una migración SQLite compatible con las bases que utilizaban el estado legado `pending`.
+
+
+## D-019 — Límite de líneas por presupuesto
+
+Un presupuesto puede contener entre 1 y 50 productos distintos. El límite se valida en el servicio y se replica en la interfaz para orientar al usuario. No se aceptan líneas repetidas del mismo producto: la cantidad debe editarse en la línea existente.
+
+## D-020 — Longitud de texto en caracteres Unicode
+
+Los límites expresados en caracteres se cuentan como puntos de código Unicode (`Array.from` en JavaScript), no como unidades UTF-16. Esto mantiene el comportamiento coherente con la longitud de texto de SQLite para los campos del dominio.
+
+- [cambio] 2026-11-15 — Se documentan el máximo de 50 líneas por presupuesto y el criterio uniforme de longitud Unicode.

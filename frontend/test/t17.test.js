@@ -361,7 +361,7 @@ function fireFilterEvents(control, eventName) {
 async function runScreen({ failFilteredRequest, deferFilteredRequests } = {}) {
   const dom = createFakeDom(readFrontend('index.html'));
   const requests = [];
-  const pendingFilteredRequests = [];
+  const deferredFilteredRequests = [];
   const deletedProductIds = new Set();
   let shouldFailFilteredRequest = Boolean(failFilteredRequest);
   const fetch = async (url, options = {}) => {
@@ -395,7 +395,7 @@ async function runScreen({ failFilteredRequest, deferFilteredRequests } = {}) {
       json: async () => filtered
     };
     if (deferFilteredRequests && (search || category)) {
-      return new Promise((resolve) => pendingFilteredRequests.push(() => resolve(response)));
+      return new Promise((resolve) => deferredFilteredRequests.push(() => resolve(response)));
     }
     return response;
   };
@@ -407,8 +407,8 @@ async function runScreen({ failFilteredRequest, deferFilteredRequests } = {}) {
     requests,
     api,
     resolveFilteredRequest(index) {
-      const resolve = pendingFilteredRequests[index];
-      assert.ok(resolve, `No existe la solicitud filtrada pendiente ${index}`);
+      const resolve = deferredFilteredRequests[index];
+      assert.ok(resolve, `No existe la solicitud filtrada en espera ${index}`);
       resolve();
     },
     setFailFilteredRequest(value) {

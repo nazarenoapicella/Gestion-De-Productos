@@ -8,19 +8,19 @@ Consultar los documentos en este orden:
 
 1. `docs/spec.md`: contrato del comportamiento funcional de la primera versión.
 2. `docs/decisiones.md`: decisiones de producto y tecnología que ya fueron adoptadas.
-3. `docs/plan.md`: propuesta de arquitectura y detalles técnicos. Debe respetar el contrato funcional y no puede inventar reglas de negocio.
-4. `docs/preguntas-abiertas.md`: asuntos reservados para versiones futuras o decisiones pendientes explícitas.
+3. `docs/plan.md`: arquitectura implementada y detalles técnicos. Debe respetar el contrato funcional y no puede inventar reglas de negocio.
+4. `docs/preguntas-abiertas.md`: decisiones de alcance futuro ya cerradas y excluidas del MVP vigente.
 5. `docs/ideas.md`: intención original y contexto del proyecto.
 6. `docs/glosario.md`: significado de términos del dominio.
 
-Si dos documentos se contradicen, no elegir silenciosamente una versión. Identificar la contradicción, explicar qué partes afecta y proponer la corrección documental más pequeña. `spec.md` y las decisiones adoptadas prevalecen sobre una propuesta técnica de `plan.md`; si el plan necesita cambiar el comportamiento observable, documentar el cambio y resolverlo antes de implementarlo. La especificación no debe cambiar solo para acomodarse a una implementación que se desvió de lo acordado.
+Si dos documentos se contradicen, no elegir silenciosamente una versión. Identificar la contradicción, explicar qué partes afecta y proponer la corrección documental más pequeña. `spec.md` y las decisiones adoptadas prevalecen sobre el diseño técnico de `plan.md`; si el plan necesita cambiar el comportamiento observable, documentar el cambio y resolverlo antes de implementarlo. La especificación no debe cambiar solo para acomodarse a una implementación que se desvió de lo acordado.
 
 ## 2. Principios no negociables
 
 - Mantener el sistema simple, legible y fácil de modificar.
 - Implementar únicamente el alcance descrito en `docs/spec.md`, salvo autorización explícita para ampliarlo.
 - No inventar flujos, roles, reglas, estados, campos ni excepciones de negocio.
-- Ante una ambigüedad que afecte al comportamiento, consultar las decisiones y preguntas abiertas. Si sigue sin resolverse, señalarla y proponer una alternativa; no presentarla como aprobada.
+- Ante una ambigüedad que afecte al comportamiento, consultar las decisiones adoptadas y el alcance documentado. No reabrir decisiones ya cerradas ni presentar una ampliación como parte del MVP sin aprobación explícita.
 - No cambiar una decisión existente sin indicar el impacto y actualizar `docs/decisiones.md` y los demás documentos afectados.
 - Preferir soluciones directas y convencionales antes que abstracciones, patrones o dependencias innecesarias.
 - No afirmar que una función, prueba, comando o integración funciona si no se ejecutó y verificó.
@@ -46,7 +46,7 @@ Antes de actuar:
 2. Leer la especificación y la regla del rol.
 3. Para tareas de arquitectura previas a la implementación, leer los documentos funcionales y crear o actualizar `docs/plan.md` antes de escribir código.
 4. Enumerar los archivos que probablemente deban cambiar.
-5. Comprobar si existe una decisión pendiente que afecte a la tarea.
+5. Comprobar qué decisiones aprobadas y límites de alcance afectan a la tarea.
 
 Durante el trabajo:
 
@@ -61,15 +61,15 @@ Al terminar:
 - Resumir los archivos cambiados y el motivo.
 - Indicar las pruebas ejecutadas y las que no pudieron ejecutarse.
 - Actualizar la documentación y el historial `[cambio]` cuando se modifique el alcance, una decisión o el funcionamiento observable.
-- Señalar cualquier duda o riesgo que siga abierto.
+- Registrar el resultado final y cualquier límite de alcance aceptado, sin convertirlo en una tarea implícitamente abierta.
 
 ## 5. Cómo se trabaja una tarea (ciclo obligatorio)
 
-Se trabaja **una sola tarea por vez**, siguiendo el orden de dependencias de `docs/task.md`. No se empieza la siguiente hasta cerrar por completo la actual.
+Se trabaja **una sola tarea por vez**, siguiendo el orden de dependencias de `docs/tasks.md`. No se empieza la siguiente hasta cerrar por completo la actual.
 
 ### Paso 1 — QA escribe y ejecuta las pruebas
 
-- El agente de QA lee la tarea correspondiente en `docs/task.md`, los criterios de aceptación de `docs/spec.md`, las reglas de negocio (RN), las historias de usuario (HU) y los casos de borde relacionados.
+- El agente de QA lee la tarea correspondiente en `docs/tasks.md`, los criterios de aceptación de `docs/spec.md`, las reglas de negocio (RN), las historias de usuario (HU) y los casos de borde relacionados.
 - Antes de implementar la funcionalidad, escribe las pruebas que cubren esos criterios y casos de borde.
 - Ejecuta las pruebas y confirma que fallan por la funcionalidad todavía ausente. Este fallo esperado es la referencia inicial del ciclo; no alcanza con escribir pruebas sin ejecutarlas.
 - Registra el comando utilizado y el resultado observado. Si las pruebas no arrancan por un problema de configuración o infraestructura, resuelve o informa ese bloqueo: no lo presenta como un fallo funcional esperado.
@@ -86,7 +86,7 @@ Se trabaja **una sola tarea por vez**, siguiendo el orden de dependencias de `do
 - El agente revisor examina el diff completo contra `docs/spec.md`, `docs/decisiones.md`, `docs/plan.md` y la tarea correspondiente.
 - Comprueba que el cambio sea acotado, que cubra los criterios y casos de borde, que no altere pruebas para ocultar errores y que no incluya cambios ajenos al objetivo.
 - Emite explícitamente uno de estos veredictos: **APROBADO** o **RECHAZADO**. Incluye evidencia breve: pruebas ejecutadas, resultado y observaciones concretas.
-- Con **RECHAZADO**, la tarea sigue pendiente. Se corrigen los problemas señalados y se repiten las pruebas y la revisión. No se crea el commit de cierre.
+- Con **RECHAZADO**, la tarea permanece sin cerrar hasta corregir los problemas señalados y repetir las pruebas y la revisión. No se crea el commit de cierre.
 
 ### Paso 4 — Commit después de la aprobación
 
@@ -96,13 +96,13 @@ Se trabaja **una sola tarea por vez**, siguiendo el orden de dependencias de `do
 
 ### Paso 5 — Cerrar la tarea en el backlog
 
-- Después del commit aprobado, actualizar `docs/task.md` y cambiar la tarea de `[ ]` a `[x]`.
+- Después del commit aprobado, actualizar `docs/tasks.md` y cambiar la tarea de `[ ]` a `[x]`.
 - No marcar una tarea como hecha antes de que las pruebas pasen, la revisión esté aprobada y exista el commit correspondiente.
 - Si corresponde, registrar en la tarea el comando de prueba y el resultado observado. No declarar comprobaciones que no se ejecutaron.
 - Como la marca `[x]` se actualiza después del commit funcional, registrar enseguida ese cambio documental en un commit de cierre asociado a la misma tarea (por ejemplo, `T-01: marcar tarea completada`). No empezar otra tarea con ese cambio sin versionar ni incorporarlo incidentalmente al siguiente trabajo.
 - Solo después de actualizar y versionar el estado se considera cerrada la tarea y se puede iniciar la siguiente tarea cuyas dependencias estén satisfechas.
 
-**Condición de cierre:** pruebas ejecutadas y aprobadas + veredicto **APROBADO** + commit funcional con el identificador de tarea + estado `[x]` en `docs/task.md` versionado en Git. Si falta cualquiera de estos elementos, la tarea no está cerrada.
+**Condición de cierre:** pruebas ejecutadas y aprobadas + veredicto **APROBADO** + commit funcional con el identificador de tarea + estado `[x]` en `docs/tasks.md` versionado en Git. Si falta cualquiera de estos elementos, la tarea no está cerrada.
 
 ## 6. Coordinación entre roles
 
@@ -120,4 +120,4 @@ Si un agente detecta que necesita cambiar el contrato de la API o una regla de n
 
 - [cambio] 2026-10-22 — Se establecen instrucciones generales, fuentes de verdad y responsabilidades de los agentes.
 - [cambio] 2026-10-28 — Se incluye `docs/plan.md` como documento técnico subordinado al contrato funcional y se formaliza el orden previo a implementar.
-- [cambio] 2026-10-28 — Se formaliza el ciclo obligatorio por tarea: pruebas primero, implementación, revisión, commit y cierre en `docs/task.md`.
+- [cambio] 2026-10-28 — Se formaliza el ciclo obligatorio por tarea: pruebas primero, implementación, revisión, commit y cierre en `docs/tasks.md`.

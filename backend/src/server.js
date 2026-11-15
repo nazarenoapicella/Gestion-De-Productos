@@ -13,6 +13,15 @@ if (!Number.isInteger(port) || port < 0 || port > 65535) {
 
 const database = openDatabase(process.env.DATABASE_PATH || undefined);
 const app = createApp({ database });
+app.use((request, response, next) => {
+  if (request.path === "/test" || request.path.startsWith("/test/")) {
+    response.status(404).json({
+      error: { code: "NOT_FOUND", message: "El recurso solicitado no existe." },
+    });
+    return;
+  }
+  next();
+});
 app.use(express.static(frontendRoot, { dotfiles: "deny", index: "index.html" }));
 
 const server = app.listen(port, host, () => {

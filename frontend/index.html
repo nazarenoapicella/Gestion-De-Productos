@@ -287,19 +287,19 @@
           <p class="budget-reservation-note">Al generar el presupuesto, las unidades se reservan y se descuentan del stock. Si el presupuesto se rechaza, el sistema devuelve esas unidades automáticamente.</p>
         </section>
 
-        <section class="budget-list-section" aria-labelledby="pending-budgets-title">
+        <section class="budget-list-section" aria-labelledby="issued-budgets-title">
           <div class="budget-list-heading">
             <div>
-              <h3 id="pending-budgets-title">Presupuestos pendientes</h3>
+              <h3 id="issued-budgets-title">Presupuestos emitidos</h3>
               <p>Marcá como pagado o rechazado cuando tengas una respuesta.</p>
             </div>
-            <span id="pending-budget-count" class="budget-count">0 pendientes</span>
+            <span id="issued-budget-count" class="budget-count">0 emitidos</span>
           </div>
           <p id="budgets-loading" class="state-message state-message--loading" role="status" hidden><span class="loading-indicator" aria-hidden="true"></span> Cargando presupuestos…</p>
           <p id="budgets-error" class="state-message state-message--error" role="alert" hidden></p>
-          <p id="pending-budgets-empty" class="state-message state-message--empty" role="status">No hay presupuestos pendientes.</p>
+          <p id="issued-budgets-empty" class="state-message state-message--empty" role="status">No hay presupuestos emitidos.</p>
           <div class="table-scroll">
-            <table id="pending-budgets-table" class="budget-table" hidden>
+            <table id="issued-budgets-table" class="budget-table" hidden>
               <caption>Presupuestos que esperan una respuesta del cliente</caption>
               <thead>
                 <tr>
@@ -310,7 +310,7 @@
                   <th scope="col">Acciones</th>
                 </tr>
               </thead>
-              <tbody id="pending-budgets-list"></tbody>
+              <tbody id="issued-budgets-list"></tbody>
             </table>
           </div>
         </section>

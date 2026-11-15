@@ -6,7 +6,7 @@ Implementar la API y hacer cumplir en el servidor las reglas de negocio definida
 
 ## Instrucciones
 
-- Leer `agents.md`, `docs/spec.md` y `rules/base-de-datos.md` antes de cambiar código.
+- Leer `AGENTS.md`, `docs/spec.md` y `rules/base-de-datos.mdc` antes de cambiar código.
 - Usar Node.js y Express.
 - Mantener rutas bajo `/api` y respuestas JSON consistentes.
 - Validar tipos, obligatoriedad, longitudes, rangos y valores permitidos en cada entrada.

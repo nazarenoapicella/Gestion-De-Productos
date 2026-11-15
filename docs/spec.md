@@ -2,7 +2,7 @@
 
 **Estado:** especificación vigente del MVP.  
 **Versión:** 1.1.  
-**Última actualización:** 2026-11-02.
+**Última actualización:** 2026-11-15.
 
 Este documento describe qué debe hacer la primera versión de Stock Simple. Debe servir como referencia común para quien solicita el sistema, quien lo analiza, quienes lo programan y los agentes de IA que colaboren. La implementación debe ajustarse a esta especificación; si se necesita otro comportamiento, primero debe revisarse y aprobarse el cambio documental.
 
@@ -33,12 +33,14 @@ No hay roles, permisos diferentes ni administración de múltiples comercios en 
 8. Actualizar el stock disponible desde el formulario de edición del producto.
 9. Mostrar un resumen con productos registrados, unidades en stock y productos con stock bajo.
 10. Validar datos y mostrar errores comprensibles.
+11. Crear presupuestos con entre 1 y 50 productos distintos, capturar sus precios y nombres históricos, reservar stock y generar un PDF.
+12. Resolver presupuestos emitidos como pagados o rechazados, mantener un historial y devolver el stock reservado una sola vez cuando se rechazan.
 
 ## 4. Fuera de alcance
 
 La primera versión no incluirá:
 
-- ventas, pedidos, carritos ni devoluciones;
+- ventas y pedidos reales, carritos, cobros electrónicos ni devoluciones comerciales. El estado `paid` de un presupuesto es una registración manual, no un procesamiento de pago;
 - compras a proveedores ni recepción de mercadería;
 - facturas, pagos, impuestos ni integración contable;
 - usuarios, autenticación, recuperación de contraseñas o roles;
@@ -167,11 +169,11 @@ Al generar un presupuesto, el sistema debe producir un PDF descargable que ident
 
 ### RN-21 — Resolución de presupuestos
 
-Un presupuesto nuevo queda en estado `pending`. Solo se puede resolver una vez como `paid` o `rejected`. Al marcarlo pagado, deja la lista de pendientes y el stock no se devuelve porque ya fue reservado al crear el presupuesto. Al rechazarlo, el stock reservado se devuelve exactamente una vez y el presupuesto pasa al historial. Los presupuestos resueltos no se eliminan del historial.
+Un presupuesto nuevo queda en estado `issued` (emitido). Los únicos estados admitidos son `issued`, `paid` y `rejected`; no existe un estado `pending`. Solo se puede resolver una vez como `paid` o `rejected`. Al marcarlo pagado, deja la lista de emitidos y el stock no se devuelve porque ya fue reservado al crear el presupuesto. Al rechazarlo, el stock reservado se devuelve exactamente una vez y el presupuesto pasa al historial. Los presupuestos resueltos no se eliminan del historial. Las bases SQLite creadas por versiones anteriores convierten automáticamente el valor histórico `pending` a `issued`, sin perder presupuestos ni líneas.
 
 ### RN-22 — Protección de productos reservados
 
-Un producto asociado a un presupuesto pendiente no se puede eliminar, para garantizar que el sistema pueda devolver sus unidades en caso de rechazo. La edición comercial posterior no modifica los datos históricos del presupuesto.
+Un producto asociado a un presupuesto emitido no se puede eliminar, para garantizar que el sistema pueda devolver sus unidades en caso de rechazo. La edición comercial posterior no modifica los datos históricos del presupuesto.
 
 ## 7. Historias de usuario y criterios de aceptación
 
@@ -183,7 +185,7 @@ Criterios de aceptación:
 
 - Al abrir el inventario, se muestran los productos existentes ordenados por nombre.
 - Si no hay productos, aparece un estado vacío claro. La opción para registrar el primero se muestra cuando el formulario de alta esté implementado.
-- Cada fila muestra, como mínimo, nombre, categoría, precio y stock. Solo se muestran acciones que estén implementadas y se puedan operar; no se usan controles decorativos para funciones pendientes.
+- Cada fila muestra, como mínimo, nombre, categoría, precio y stock. Solo se muestran acciones que estén implementadas y se puedan operar; no se usan controles decorativos para funciones no implementadas.
 - Un error del servidor se informa sin mostrar una pantalla rota ni datos ficticios como si fueran reales.
 
 ### HU-02 — Registrar producto
@@ -264,11 +266,11 @@ Criterios de aceptación:
 
 Criterios de aceptación:
 
-- Los presupuestos pendientes se muestran en una lista propia.
-- Al marcar uno como pagado, desaparece de pendientes, queda en el historial y el stock no cambia.
-- Al rechazarlo, desaparece de pendientes, queda en el historial y se restaura el stock reservado.
+- Los presupuestos con estado `issued` se muestran en una lista propia con el rótulo visible **Emitido**.
+- Al marcar uno como pagado, desaparece de la lista de emitidos, queda en el historial con estado `paid` y el stock no cambia.
+- Al rechazarlo, desaparece de la lista de emitidos, queda en el historial con estado `rejected` y se restaura el stock reservado.
 - Un presupuesto resuelto no puede volver a resolverse ni devolver stock por segunda vez.
-- Mientras existan reservas pendientes, el producto relacionado no se puede eliminar.
+- Mientras existan reservas activas, el producto relacionado no se puede eliminar.
 - Cada presupuesto conserva los nombres y precios que tenía cuando se generó, incluso si después se modifica el catálogo.
 
 ### HU-07 — Consultar resumen y reposición
@@ -305,10 +307,10 @@ Criterios de aceptación:
 | Se intenta presupuestar una cantidad cero, negativa, decimal, texto o superior al stock. | Rechazar el presupuesto completo; no reservar ninguna unidad. |
 | Uno de varios productos de un presupuesto tiene stock insuficiente. | Cancelar toda la transacción; el stock de ninguna línea se modifica. |
 | Se genera un presupuesto válido. | Guardar precios y nombres históricos, descontar el stock y generar el PDF. |
-| Se marca un presupuesto como pagado. | Sacarlo de pendientes, conservarlo en el historial y mantener descontado el stock. |
+| Se marca un presupuesto como pagado. | Sacarlo de emitidos, conservarlo en el historial y mantener descontado el stock. |
 | Se marca un presupuesto como rechazado. | Devolver todo el stock reservado una sola vez y conservar el presupuesto en el historial. |
 | Se intenta resolver por segunda vez un presupuesto. | Rechazar con conflicto y no modificar el stock. |
-| Se intenta eliminar un producto con un presupuesto pendiente. | Rechazar la eliminación para preservar la capacidad de devolver el stock. |
+| Se intenta eliminar un producto con un presupuesto emitido. | Rechazar la eliminación para preservar la capacidad de devolver el stock. |
 
 ## 9. API prevista
 
@@ -324,7 +326,7 @@ La implementación utilizará rutas JSON bajo `/api`. Los nombres exactos pueden
 | `PATCH /api/products/:id/stock` | Aumentar o disminuir el stock mediante operación y cantidad. |
 | `GET /api/summary` | Obtener los tres indicadores del inventario. |
 | `POST /api/budgets` | Crear un presupuesto y reservar el stock. |
-| `GET /api/budgets` | Listar presupuestos pendientes e históricos. |
+| `GET /api/budgets` | Listar presupuestos emitidos e históricos. |
 | `GET /api/budgets/:id` | Consultar un presupuesto y sus líneas. |
 | `GET /api/budgets/:id/pdf` | Descargar el PDF del presupuesto. |
 | `PATCH /api/budgets/:id/status` | Marcar el presupuesto como `paid` o `rejected`. |
@@ -346,8 +348,8 @@ Las solicitudes y respuestas intercambian JSON, salvo que una respuesta no tenga
 
 El MVP se considera terminado cuando:
 
-1. Las siete historias de usuario de esta especificación pasan sus criterios de aceptación.
-2. Las reglas RN-01 a RN-18 se cumplen en la API, no solo en el navegador.
+1. Las nueve historias de usuario de esta especificación pasan sus criterios de aceptación.
+2. Las reglas RN-01 a RN-22 se cumplen en la API, no solo en el navegador.
 3. Los datos persisten tras reiniciar el servidor.
 4. Se comprueban al menos los casos límite de la sección 8, mediante pruebas automatizadas de backend o comprobaciones manuales documentadas cuando corresponda.
 5. El frontend informa correctamente de los estados de carga, éxito, vacío y error necesarios.
@@ -358,9 +360,9 @@ El MVP se considera terminado cuando:
 
 - `ideas.md`: contexto y necesidad original.
 - `decisiones.md`: decisiones funcionales y técnicas adoptadas.
-- `preguntas-abiertas.md`: asuntos para evaluar en una versión futura.
+- `preguntas-abiertas.md`: decisiones de alcance futuro expresamente excluidas del MVP actual.
 - `glosario.md`: terminología del dominio.
-- `../agents.md`: instrucciones generales para agentes.
+- `../AGENTS.md`: instrucciones generales para agentes.
 - `../rules/`: reglas por rol.
 
 ## Historial de cambios
@@ -369,3 +371,6 @@ El MVP se considera terminado cuando:
 - [cambio] 2026-10-28 — RN-03 y el contrato de producto precisan el transporte de `price` como texto decimal exacto, conforme a D-015.
 - [cambio] 2026-11-02 — Se incorporan reglas, historias, casos límite y endpoints para presupuestos, PDF, reservas de stock y resolución de operaciones.
 - [cambio] 2026-11-02 — La búsqueda del inventario filtra al escribir y el stock se edita dentro del formulario del producto; se elimina la acción independiente de ajuste.
+- [cambio] 2026-11-15 — Se unifica el estado de los presupuestos en `issued` (Emitido), `paid` y `rejected`, y se documenta la migración de bases anteriores.
+
+- [cambio] 2026-11-15 — Se actualizan los criterios globales para incluir las 9 HU y RN-01 a RN-22, incluyendo presupuestos y reservas.

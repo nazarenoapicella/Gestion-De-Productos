@@ -28,7 +28,7 @@ const schema = `
 
   CREATE TABLE IF NOT EXISTS budgets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'rejected')),
+    status TEXT NOT NULL CHECK (status IN ('issued', 'paid', 'rejected')),
     total_cents INTEGER NOT NULL CHECK (typeof(total_cents) = 'integer' AND total_cents >= 0),
     created_at TEXT NOT NULL,
     resolved_at TEXT
@@ -53,6 +53,51 @@ const schema = `
   CREATE INDEX IF NOT EXISTS idx_budget_items_product
     ON budget_items(product_id);
 `;
+
+function migrateLegacyBudgetStatus(database) {
+  const table = database.prepare(
+    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'budgets'",
+  ).get();
+  if (!table?.sql || !table.sql.includes("'pending'")) return;
+
+  // SQLite no permite cambiar directamente un CHECK constraint. Se reconstruye
+  // la tabla dentro de una transacción y se conservan IDs, estados resueltos y líneas.
+  database.exec("PRAGMA foreign_keys = OFF");
+  let transactionOpen = false;
+  try {
+    database.exec("BEGIN IMMEDIATE");
+    transactionOpen = true;
+    database.exec(`
+      CREATE TABLE budgets_migrating (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        status TEXT NOT NULL CHECK (status IN ('issued', 'paid', 'rejected')),
+        total_cents INTEGER NOT NULL CHECK (typeof(total_cents) = 'integer' AND total_cents >= 0),
+        created_at TEXT NOT NULL,
+        resolved_at TEXT
+      );
+
+      INSERT INTO budgets_migrating (id, status, total_cents, created_at, resolved_at)
+      SELECT id,
+             CASE status WHEN 'pending' THEN 'issued' ELSE status END,
+             total_cents,
+             created_at,
+             resolved_at
+      FROM budgets;
+
+      DROP TABLE budgets;
+      ALTER TABLE budgets_migrating RENAME TO budgets;
+      CREATE INDEX IF NOT EXISTS idx_budgets_status_created
+        ON budgets(status, created_at DESC);
+    `);
+    database.exec("COMMIT");
+    transactionOpen = false;
+  } catch (error) {
+    if (transactionOpen) database.exec("ROLLBACK");
+    throw error;
+  } finally {
+    database.exec("PRAGMA foreign_keys = ON");
+  }
+}
 
 function openDatabase(databasePath = process.env.DATABASE_PATH || defaultDatabasePath) {
   const isInMemory = databasePath === ":memory:";
@@ -82,6 +127,7 @@ function openDatabase(databasePath = process.env.DATABASE_PATH || defaultDatabas
         .toLocaleLowerCase("es-ES"),
     );
     database.exec(schema);
+    migrateLegacyBudgetStatus(database);
     return database;
   } catch (error) {
     database.close();

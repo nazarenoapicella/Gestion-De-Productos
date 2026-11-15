@@ -56,6 +56,9 @@ test("el servidor sirve la interfaz con encabezados de seguridad y bloquea el tr
     assert.equal(pageResponse.headers.get("referrer-policy"), "same-origin");
     assert.match(pageResponse.headers.get("content-security-policy") || "", /default-src 'self'/);
 
+    const frontendTestResponse = await fetch(`http://127.0.0.1:${port}/test/t13.test.js`);
+    assert.equal(frontendTestResponse.status, 404);
+
     const stylesheetResponse = await fetch(`http://127.0.0.1:${port}/css/styles.css`);
     assert.equal(stylesheetResponse.status, 200);
     assert.match(stylesheetResponse.headers.get("content-type") || "", /text\/css/i);

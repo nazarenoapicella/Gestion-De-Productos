@@ -64,7 +64,7 @@ function validateText(input, field, { required, maxLength }) {
   if (required && normalized.length === 0) {
     throw new ValidationError(`El campo ${field} es obligatorio.`);
   }
-  if (normalized.length > maxLength) {
+  if (Array.from(normalized).length > maxLength) {
     throw new ValidationError(`El campo ${field} no puede superar ${maxLength} caracteres.`);
   }
   return field === "description" && normalized.length === 0 ? null : normalized;
@@ -217,7 +217,7 @@ function normalizeListFilters(filters) {
       throw new ValidationError(`El filtro ${field} debe ser texto.`);
     }
     const value = filters[field].trim();
-    if (value.length > maxLength) {
+    if (Array.from(value).length > maxLength) {
       throw new ValidationError(`El filtro ${field} no puede superar ${maxLength} caracteres.`);
     }
     if (value) normalized[field] = value;
