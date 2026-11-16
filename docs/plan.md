@@ -1,9 +1,9 @@
 # Plan técnico — Stock Simple
 
-> **Estado:** arquitectura implementada y vigente; esta documentación describe el sistema construido.  
-> **Responsable de elaboración:** agente arquitecto.  
-> **Alcance:** MVP definido en [`spec.md`](spec.md).  
-> **Última actualización:** 2026-11-15.
+> **Estado:** arquitectura implementada y vigente; esta documentación describe el sistema construido.
+> **Responsable de elaboración:** agente arquitecto.
+> **Alcance:** MVP definido en [`spec.md`](spec.md).
+> **Última actualización:** 2026-11-16.
 
 Este documento explica cómo se propone construir el sistema a partir de los requisitos actuales. No reemplaza la especificación funcional ni autoriza funciones que estén fuera del MVP. Si el plan contradice una regla de negocio de `spec.md` o una decisión adoptada en `decisiones.md`, se debe registrar la contradicción y resolverla antes de programar.
 
@@ -56,7 +56,7 @@ stock-simple/
 ├── AGENTS.md
 ├── .gitignore
 ├── docs/
-│   ├── ideas.md
+│   ├── idea.md
 │   ├── decisiones.md
 │   ├── preguntas-abiertas.md
 │   ├── glosario.md
@@ -122,11 +122,11 @@ En el MVP existe una sola entidad persistida: el producto. Las categorías son t
 | Campo lógico | Columna SQLite | Tipo | Reglas |
 |---|---|---|---|
 | Identificador | `id` | `INTEGER PRIMARY KEY` | Generado por SQLite; único y no elegido por el usuario. |
-| Nombre | `name` | `TEXT NOT NULL` | Entre 1 y 100 caracteres después de quitar espacios externos. Los nombres repetidos están permitidos. |
+| Nombre | `name` | `TEXT NOT NULL` | Entre 1 y 100 caracteres después de quitar espacios externos. Los nombres no pueden repetirse después de normalizar mayúsculas, minúsculas, tildes y espacios repetidos, de acuerdo con RN-01. |
 | Descripción | `description` | `TEXT` | Opcional; máximo 500 caracteres. El valor vacío se normalizará a `NULL`. |
 | Categoría | `category` | `TEXT NOT NULL` | Entre 1 y 50 caracteres después de quitar espacios externos. |
 | Precio en centavos | `price_cents` | `INTEGER NOT NULL` | No negativo. Representa el precio en ARS sin errores de precisión decimal. |
-| Stock actual | `stock` | `INTEGER NOT NULL` | Entero igual o mayor que cero. |
+| Stock actual | `stock` | `INTEGER NOT NULL` | Entero seguro de JavaScript entre 0 y `Number.MAX_SAFE_INTEGER`, inclusive. |
 | Fecha de creación | `created_at` | `TEXT NOT NULL` | Fecha y hora generadas por el sistema, en formato ISO 8601 UTC. |
 | Última modificación | `updated_at` | `TEXT NOT NULL` | Fecha y hora generadas por el sistema, en formato ISO 8601 UTC. |
 
@@ -137,8 +137,8 @@ Se usarán restricciones `CHECK` en SQLite para reforzar, como mínimo, los lím
 - La interfaz y el contrato de la API representan `price` como texto decimal en ARS, con hasta dos cifras decimales. No se aceptan separadores de miles ni notación exponencial.
 - Antes de persistir, el backend valida y convierte el texto a centavos enteros; al responder, vuelve a exponer `price` como texto decimal exacto con dos cifras decimales.
 - Se rechazan importes cuyo `price_cents` exceda `Number.MAX_SAFE_INTEGER`, límite técnico requerido para operar con seguridad con enteros en JavaScript; no es un máximo comercial.
-- El stock se guarda como entero. En ningún flujo se acepta una cantidad decimal o negativa.
-- El stock solo puede cambiar al crear un producto o mediante la operación específica de ajuste; el endpoint de edición normal no puede modificarlo.
+- El stock se guarda como entero seguro de JavaScript, entre 0 y `Number.MAX_SAFE_INTEGER`, inclusive. En ningún flujo se acepta una cantidad decimal, negativa o fuera de ese rango.
+- El stock puede definirse al crear un producto, actualizarse mediante el formulario/endpoint de edición del producto y ajustarse mediante el endpoint histórico de aumento o disminución. Todas las operaciones deben validar enteros seguros no negativos y evitar desbordamientos.
 
 ### 3.3 Resumen de inventario
 
@@ -164,12 +164,20 @@ La comunicación será una API REST con JSON bajo `/api`. Express servirá tambi
 | `PATCH /api/products/:id/stock` | Aumentar o disminuir stock con `operation` y `quantity`. | `200` y el producto actualizado, o un error controlado. |
 | `GET /api/summary` | Obtener los indicadores del inventario. | `200` con los tres indicadores. |
 
-### 4.1 Convenciones del contrato
+### 4.1 Origen de las solicitudes y CORS
+
+El servidor Express monta la API bajo `/api` y, en `server.js`, sirve los archivos estáticos del frontend desde el mismo proceso. El cliente usa rutas relativas (`/api/...`); en la ejecución local y en el despliegue de un único servicio, la página y la API comparten protocolo, host y puerto. Las peticiones del navegador son **same-origin**, por lo que no se necesita middleware CORS ni encabezados `Access-Control-Allow-Origin`.
+
+No se debe agregar `Access-Control-Allow-Origin: *`. Si en el futuro se publican frontend y backend en orígenes distintos, el backend deberá configurar una allowlist con el origen exacto del frontend (por ejemplo, `FRONTEND_ORIGIN`), y limitar métodos y encabezados a los que realmente utiliza la API. Los orígenes que no estén en la lista no deben recibir permisos CORS.
+
+CORS controla el acceso de JavaScript en navegadores a respuestas cross-origin; no autentica usuarios ni impide llamadas directas desde Postman, `curl` u otros clientes. Como el MVP no tiene autenticación, la demo pública se limita a evaluación académica y debe usar datos ficticios/de prueba.
+
+### 4.2 Convenciones del contrato
 
 - `operation` será `increase` o `decrease`; `quantity` será un entero positivo.
 - El DTO de producto tendrá `id`, `name`, `description`, `category`, `price` como texto decimal exacto, `stock`, `createdAt` y `updatedAt`, según D-016. No incluirá `lowStock` hasta que se adopte mediante una decisión.
 - Las solicitudes envían `price` como texto decimal no negativo, sin agrupación de miles ni exponente, y con hasta dos cifras decimales. El backend lo convierte exactamente a centavos; las respuestas usan texto decimal con dos cifras.
-- Las solicitudes de edición exigirán `name`, `category` y `price`; `description` es opcional y se conserva cuando se omite. Aunque el cliente envíe por error `stock`, ese campo nunca debe modificar el stock.
+- Las solicitudes de edición exigirán `name`, `category`, `price` y `stock`; `description` es opcional y se conserva cuando se omite. El stock debe ser un entero seguro no negativo y se actualiza en la misma operación que los demás campos comerciales, conforme a RN-04 y RN-05.
 - Los códigos de error adoptados en D-016 son `400`/`VALIDATION_ERROR` para datos inválidos, `404`/`NOT_FOUND` para un producto inexistente y `500`/`INTERNAL_SERVER_ERROR` para un fallo inesperado. Los errores internos devuelven un mensaje genérico sin detalles técnicos.
 - El formato común de error adoptado en D-016 es `{ "error": { "code": "...", "message": "...", "fields": {} } }`; `fields` puede omitirse cuando no corresponda.
 - Se utilizarán consultas SQL parametrizadas y no se concatenará texto del usuario en el SQL.
@@ -185,7 +193,7 @@ La regla se define funcionalmente en `docs/spec.md`; su implementación principa
 | RN-01 — Nombre obligatorio | `products.service` | Frontend indica el campo requerido; SQLite impide valores vacíos o fuera del límite. |
 | RN-02 — Categoría obligatoria y reutilizable | `products.service` | Frontend indica el campo requerido; SQLite aplica restricciones de longitud y no nulidad. Las categorías equivalentes se canonicalizan, no se rechazan. |
 | RN-03 — Precio válido, no negativo y con hasta dos decimales | `products.service` | Frontend ayuda con el formato; SQLite garantiza `price_cents >= 0`. |
-| RN-04 — Stock entero y no negativo | `products.service` | Frontend valida el formulario; SQLite garantiza `stock >= 0`. |
+| RN-04 — Stock entero seguro y no negativo | `products.service` y repositorio | Frontend valida el formulario; el backend comprueba entero seguro y el rango técnico; SQLite refuerza `stock >= 0`. |
 | RN-05 — El stock se modifica desde el formulario de edición | `products.service`, con lista explícita de campos editables | Repository actualiza nombre, descripción, categoría, precio y stock validado en una única operación. |
 | RN-06 — Aumento del stock | `products.service` coordina la operación | Repository ejecuta una actualización atómica y parametrizada. |
 | RN-07 — Disminución del stock sin quedar negativo | `products.service` valida la cantidad y comunica el resultado | Repository ejecuta una actualización condicional que solo resta si hay stock suficiente. |
@@ -196,7 +204,7 @@ La regla se define funcionalmente en `docs/spec.md`; su implementación principa
 | RN-12 — Búsqueda parcial por nombre, sin distinguir mayúsculas | `products.service` normaliza el término | Repository realiza una consulta parametrizada con coincidencia parcial. |
 | RN-13 — Filtro por categoría completa normalizada | `products.service` normaliza el filtro | Repository compara categoría ignorando mayúsculas, tildes y espacios repetidos. |
 | RN-14 — Combinar búsqueda y categoría | `products.service` pasa ambos filtros | Repository los combina con `AND`; si falta uno, no restringe por ese criterio. |
-| RN-15 — Orden alfabético ascendente | Repository | SQL ordena por nombre ascendente. |
+| RN-15 — Orden alfabético ascendente y estable | Repository | SQL ordena por `name COLLATE NOCASE ASC, id ASC`. |
 | RN-16 — Confirmación y eliminación | Frontend confirma; service/controller ejecutan la operación y detectan inexistencia | Repository elimina solo el identificador solicitado; cancelar no envía la petición. |
 | RN-17 — Persistencia tras reiniciar | Módulo de base de datos y repository | Archivo SQLite persistente; pruebas verifican el reinicio del servidor. |
 | RN-18 — Validación autoritativa y rechazo íntegro | `products.service` y `summary.service` cuando corresponda | Restricciones SQL, operaciones atómicas y respuestas de error consistentes; una petición inválida no debe producir cambios parciales. |
@@ -237,23 +245,23 @@ Los filtros se construyen con consultas parametrizadas. La búsqueda por nombre 
 - **Tiempo:** no existen reglas de negocio dependientes de horarios, vencimientos o zonas horarias. Solo se guardan `created_at` y `updated_at`, con valores generados por el servidor en UTC.
 - **Correo electrónico:** no se envían correos ni notificaciones en el MVP; no se añadirá integración de email.
 
-## 7. ¿Qué dudas quedan para el analista?
+## 7. Supuestos técnicos ya resueltos
 
-La especificación define las reglas de negocio necesarias para el MVP. No se identifican dudas funcionales que impidan comenzar el diseño. Sí quedan algunos detalles técnicos que el plan propone resolver de forma explícita antes de terminar la API.
+La especificación define las reglas de negocio necesarias para el MVP. No quedan dudas funcionales ni técnicas pendientes que bloqueen el desarrollo. Los detalles de contrato que se identificaron durante el análisis se resolvieron y quedaron documentados en `decisiones.md` y `spec.md`.
 
-| Tema | Lo que la especificación aún no fija | Propuesta del plan | ¿Bloquea el MVP? |
+| Tema | Ambigüedad original | Decisión adoptada | Estado |
 |---|---|---|---|
-| Representación y límite técnico del precio | La conversión de texto JSON numérico a `Number` puede perder centavos antes de validar. | D-015 define `price` como texto decimal en solicitudes y respuestas, con máximo técnico `price_cents = Number.MAX_SAFE_INTEGER`. | No; decisión adoptada y documentada en `decisiones.md`. |
-| Formato de errores | El formato que no estaba fijado inicialmente quedó definido en D-016. | Aplicar el formato común descrito en la sección 4.1, con `code`, `message` y `fields` opcional. | Resuelto: D-016 adoptada. |
-| `lowStock` en la respuesta | La especificación no requiere una propiedad calculada en el DTO de producto. | No incluir `lowStock` hasta que una decisión expresa lo requiera. | Resuelto: D-016 excluye la propiedad por ahora. |
-| Límite numérico de stock | Se exige entero no negativo, pero no se define un máximo funcional. | Rechazar cantidades que no puedan representarse de forma segura en JavaScript y SQLite; no añadir un máximo comercial arbitrario. | No para uso normal; documentar el límite técnico y probar el rechazo de valores fuera de rango. |
-| Empate al ordenar nombres idénticos | Se establece orden alfabético por nombre, sin orden secundario. | Usar `id ASC` como segundo criterio para obtener resultados estables cuando los nombres sean iguales. | No; no cambia ninguna regla de negocio. |
+| Representación y límite técnico del precio | La conversión de texto JSON numérico a `Number` podía perder centavos antes de validar. | D-015 define `price` como texto decimal en solicitudes y respuestas, con máximo técnico `price_cents = Number.MAX_SAFE_INTEGER`. | Resuelto: D-015 y RN-03. |
+| Formato de errores | El formato de error no estaba fijado inicialmente. | Aplicar el formato común descrito en la sección 4.2, con `code`, `message` y `fields` opcional. | Resuelto: D-016. |
+| `lowStock` en la respuesta | La especificación no requiere una propiedad calculada en el DTO de producto. | No incluir `lowStock` en el DTO de producto; el resumen expone el indicador agregado. | Resuelto: D-016 y RN-11. |
+| Límite numérico de stock | No se definía un máximo comercial ni técnico. | No se añade un máximo comercial arbitrario; se exige un entero seguro de JavaScript hasta `Number.MAX_SAFE_INTEGER`. | Resuelto: D-022 y RN-04. |
+| Empate al ordenar nombres | Se establecía orden alfabético sin desempate. | Usar `id ASC` como segundo criterio para obtener resultados estables. | Resuelto: D-022 y RN-15. |
 
-Estas propuestas son detalles técnicos del contrato, no nuevas funciones de negocio. Las decisiones adoptadas se registran en `decisiones.md`; cualquier cambio que afecte el comportamiento observable también debe actualizar `spec.md` antes de implementarse.
+Estos supuestos técnicos están cerrados y no constituyen pendientes. Si una necesidad posterior modifica el comportamiento observable, primero se registra una nueva decisión y se actualiza `spec.md`.
 
 ## 8. Secuencia de implementación
 
-1. **Preparación:** confirmar este plan y resolver o aceptar las propuestas técnicas de la sección 7.
+1. **Preparación:** confirmar este plan y respetar los supuestos técnicos ya resueltos en la sección 7.
 2. **Base de datos:** crear la inicialización de SQLite, el esquema y las restricciones; comprobar persistencia.
 3. **Backend:** implementar primero repository, después services, controllers y rutas; cubrir las reglas y casos límite con pruebas.
 4. **API:** verificar manualmente y mediante pruebas los códigos HTTP, filtros, ajustes de stock, validaciones y resumen.
@@ -273,6 +281,7 @@ No se debe empezar por generar toda la aplicación en un único prompt. Cada eta
 - [`../rules/arquitectura.mdc`](../rules/arquitectura.mdc): reglas del agente arquitecto.
 
 ## Historial de cambios
+- [cambio] 2026-11-16 — Se alinean el contrato y el plan con la validación real de nombres únicos, el stock entero seguro, el orden determinista por `id` y las decisiones técnicas cerradas.
 
 - [cambio] 2026-10-28 — Se crea el plan técnico previo a la implementación: capas, persistencia, modelo de datos, API, ubicación de reglas, riesgos y dudas técnicas.
 - [cambio] 2026-10-28 — Se actualiza el transporte de `price` a texto decimal exacto y se documenta el límite técnico de centavos seguros según D-015.
@@ -298,7 +307,7 @@ Esta sección prevalece sobre cualquier frase histórica del documento que descr
 
 - El stock disponible se edita dentro del formulario de edición del producto. Los endpoints de ajuste relativo se mantienen por compatibilidad y cobertura de API, pero no se exponen como acción separada en la interfaz.
 - Las categorías son texto reutilizable normalizado; no existe administración independiente de categorías.
-- La aplicación no incluye autenticación. Es de uso local o controlado y no debe exponerse públicamente con datos reales.
+- La aplicación no incluye autenticación. Se admite una demo pública exclusivamente para evaluación académica y con datos ficticios/de prueba; no debe utilizarse públicamente ni en producción con datos reales.
 - El backend requiere Node.js 22.13.0 o superior y utiliza `node:sqlite`; no necesita un paquete nativo de SQLite.
 
 ### 9.3 Criterios técnicos de aceptación implementados
@@ -314,3 +323,5 @@ Esta sección prevalece sobre cualquier frase histórica del documento que descr
 Las tareas del backlog, las suites automatizadas completas de backend y frontend, las verificaciones manuales y el recorrido integral se consideran completados y aprobados según la confirmación del equipo. La suite frontend se ejecuta desde `frontend/` con `npm test`; la suite backend desde `backend/` con `npm test`. El informe `docs/INFORME-VERIFICACION.md` consolida el resultado de aceptación del equipo y las verificaciones técnicas adicionales de esta revisión. No quedan acciones abiertas dentro del alcance del MVP.
 
 - [cambio] 2026-11-15 — Se incorpora bloqueo de acceso HTTP a los archivos fuente de pruebas bajo `/test/`; las pruebas permanecen en el repositorio pero no se sirven como contenido estático.
+
+- [cambio] 2026-11-16 — Se documenta la arquitectura same-origin, el alcance real de CORS y la excepción limitada de la demo académica pública.

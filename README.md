@@ -8,12 +8,12 @@ Aplicación web para gestionar un catálogo de productos, el stock disponible, e
 
 **Aplicación publicada:** https://gestion-de-productos-k96u.onrender.com/
 
-Está desplegada en Render (plan gratuito) como un único servicio que sirve la API y la interfaz desde el mismo origen, por lo que no requiere configuración de CORS.
+La arquitectura de la demo utiliza un único servicio que sirve API e interfaz desde el mismo origen. El frontend utiliza rutas relativas `/api`, por lo que no requiere configuración CORS. Si se separaran los servicios, el backend tendría que permitir exclusivamente el origen exacto del frontend, sin `*`.
 
 - Si nadie la usó en los últimos 15 minutos, el primer acceso puede demorar alrededor de un minuto mientras el servicio se reactiva.
 - La base SQLite vive en el disco temporal del servicio: productos y presupuestos cargados se pierden cuando el servicio se reinicia o se vuelve a desplegar.
 - Variables de entorno configuradas en el panel de Render (no están en el repositorio): `NODE_VERSION=22`, `HOST=0.0.0.0`.
-- La demo no tiene autenticación: cualquiera que conozca la dirección puede ver y modificar los datos, por eso no debe cargarse información real.
+- La demo no tiene autenticación: cualquiera que conozca la dirección puede ver y modificar los datos. La publicación es únicamente para evaluación académica; no debe cargarse información real.
 
 **Recorrido sugerido para probarla:** crear un producto con stock, editarlo para cambiar su stock, entrar en **Presupuestos**, generar un presupuesto (se descarga el PDF y el stock se descuenta) y marcarlo como **Rechazado** para ver que el stock reservado se devuelve.
 
@@ -53,7 +53,7 @@ stock-simple/
 ├── docs/
 │   ├── decisiones.md
 │   ├── glosario.md
-│   ├── ideas.md
+│   ├── idea.md
 │   ├── plan.md
 │   ├── preguntas-abiertas.md
 │   ├── spec.md
@@ -67,7 +67,8 @@ stock-simple/
 │   ├── base-de-datos.mdc
 │   ├── documentacion.mdc
 │   ├── frontend.mdc
-│   └── testing-qa.mdc
+│   ├── testing-qa.mdc
+│   └── revisor.mdc
 ├── backend/
 │   ├── .env.example
 │   ├── package.json
@@ -144,7 +145,7 @@ npm test
 
 ## Probar frontend y suite completa
 
-Desde la raíz del repositorio, para ejecutar las pruebas de frontend: 
+Desde la raíz del repositorio, para ejecutar las pruebas de frontend:
 
 ```bash
 cd frontend
@@ -217,7 +218,7 @@ Para comprobar que los cambios persisten tras reiniciar el servidor:
 
 ## Documentación del proyecto
 
-- [`docs/ideas.md`](docs/ideas.md): problema y objetivo.
+- [`docs/idea.md`](docs/idea.md): problema y objetivo.
 - [`docs/decisiones.md`](docs/decisiones.md): decisiones vigentes.
 - [`docs/glosario.md`](docs/glosario.md): términos del dominio.
 - [`docs/preguntas-abiertas.md`](docs/preguntas-abiertas.md): decisiones de alcance futuro, cerradas para este MVP.

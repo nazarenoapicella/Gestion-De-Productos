@@ -14,7 +14,7 @@ La primera versión administra productos y sus cantidades en stock. No administr
 
 **Estado:** adoptada.
 
-El MVP considera un único comercio y un único operador, sin inicio de sesión ni roles. Durante esta etapa se utilizará en local o en un entorno controlado. No debe exponerse a Internet ni utilizarse en producción con datos reales antes de incorporar y verificar autenticación, autorización y medidas de seguridad apropiadas.
+El MVP considera un único comercio y un único operador, sin inicio de sesión ni roles. El uso normal previsto es local o controlado. Se admite una demo pública únicamente para la evaluación académica y solo con datos ficticios/de prueba. La demo no es apta para producción ni para datos reales mientras no existan autenticación, autorización y medidas de seguridad apropiadas.
 
 **Motivo:** no sumar identidad y permisos al primer ciclo de aprendizaje, sin presentar la versión sin autenticación como segura para una publicación pública.
 
@@ -27,7 +27,7 @@ El MVP considera un único comercio y un único operador, sin inicio de sesión 
 - Persistencia: SQLite.
 - Comunicación: API REST que intercambia JSON.
 
-El backend servirá la interfaz estática y la API bajo `/api` para mantener sencilla la ejecución local y evitar una configuración de CORS innecesaria en el MVP.
+El backend sirve la interfaz estática y la API bajo `/api` desde el mismo origen. El frontend usa rutas relativas, por lo que no requiere configuración CORS en la arquitectura vigente. Si en el futuro se separan los servicios, se habilitará una allowlist exacta para el origen del frontend; nunca se utilizará `*`.
 
 ## D-004 — Datos de un producto
 
@@ -150,8 +150,46 @@ Para conservar la compatibilidad con las bases SQLite existentes, al abrir una b
 
 **Motivo:** impedir sobreventa, evitar que una misma reserva se devuelva dos veces y preservar el documento comercial emitido aunque el catálogo cambie.
 
-## Historial de cambios
+## D-019 — Límite de líneas por presupuesto
 
+**Estado:** adoptada.
+
+Un presupuesto puede contener entre 1 y 50 productos distintos. El límite se valida en el servicio y se replica en la interfaz para orientar al usuario. No se aceptan líneas repetidas del mismo producto: la cantidad debe editarse en la línea existente.
+
+**Motivo:** mantener los presupuestos acotados y evitar sumar dos veces un mismo producto en una única emisión.
+
+## D-020 — Longitud de texto en caracteres Unicode
+
+**Estado:** adoptada.
+
+Los límites de longitud expresados en caracteres se cuentan en puntos de código Unicode (`Array.from` en JavaScript), no como unidades UTF-16. Backend y frontend aplican el mismo criterio.
+
+**Motivo:** garantizar que los límites documentados sean comprensibles y se apliquen igual a textos con caracteres Unicode.
+
+
+## D-021 — Demo de evaluación y política de origen
+
+**Estado:** adoptada.
+
+La demo puede estar disponible en Internet para que la docente evalúe la aplicación, pero no debe tratarse como una instancia productiva: no hay login ni separación de datos y solo se deben cargar datos ficticios/de prueba. La aplicación sirve frontend y API desde el mismo origen, con solicitudes relativas `/api`; por eso no se agrega middleware CORS. Si la arquitectura se divide en distintos orígenes, se habilitará una allowlist explícita con el origen exacto del frontend y métodos/encabezados limitados a la API. Nunca se usará `Access-Control-Allow-Origin: *`.
+
+CORS no se considera un mecanismo de autenticación: clientes directos como Postman o `curl` pueden invocar una API accesible por red aunque el navegador aplique la política de origen.
+
+**Motivo:** reconciliar la necesidad de una demo pública para evaluación con el límite de seguridad del MVP y dejar explícita la decisión de arquitectura.
+
+- [cambio] 2026-11-16 — Se documenta la excepción académica de publicación y la política same-origin/CORS.
+
+## D-022 — Límite técnico del stock y orden determinista
+
+**Estado:** adoptada.
+
+El stock se valida como entero seguro de JavaScript no negativo y no puede superar `Number.MAX_SAFE_INTEGER`. No se define un máximo comercial arbitrario. Para el listado, los productos se ordenan por `name COLLATE NOCASE ASC` y, cuando dos nombres empatan, por `id ASC`, para mantener respuestas deterministas.
+
+**Motivo:** evitar pérdida de precisión en JavaScript y garantizar un orden estable entre resultados con nombres iguales.
+
+- [cambio] 2026-11-16 — Se documentan el límite técnico de stock y el criterio secundario de orden.
+
+## Historial de cambios
 - [cambio] 2026-10-22 — Se documentan las decisiones iniciales necesarias para especificar el MVP sin ambigüedades relevantes.
 - [cambio] 2026-10-28 — D-015 fija el precio decimal como texto en solicitudes y respuestas JSON para preservar centavos con precisión.
 - [cambio] 2026-10-28 — D-016 adopta el DTO de producto sin `lowStock` y el formato/códigos comunes de error de la API.
@@ -159,14 +197,5 @@ Para conservar la compatibilidad con las bases SQLite existentes, al abrir una b
 - [cambio] 2026-11-02 — D-018 adopta el flujo de presupuestos con reserva, PDF e historial de estados pagado/rechazado.
 - [cambio] 2026-11-02 — Se confirma que las categorías son reutilizables y se canonicalizan; se integra la edición del stock disponible en el formulario de edición del producto y se retira la acción independiente de la interfaz.
 - [cambio] 2026-11-15 — El estado operativo de los presupuestos se denomina `issued` (Emitido); se incorpora una migración SQLite compatible con las bases que utilizaban el estado legado `pending`.
-
-
-## D-019 — Límite de líneas por presupuesto
-
-Un presupuesto puede contener entre 1 y 50 productos distintos. El límite se valida en el servicio y se replica en la interfaz para orientar al usuario. No se aceptan líneas repetidas del mismo producto: la cantidad debe editarse en la línea existente.
-
-## D-020 — Longitud de texto en caracteres Unicode
-
-Los límites expresados en caracteres se cuentan como puntos de código Unicode (`Array.from` en JavaScript), no como unidades UTF-16. Esto mantiene el comportamiento coherente con la longitud de texto de SQLite para los campos del dominio.
-
 - [cambio] 2026-11-15 — Se documentan el máximo de 50 líneas por presupuesto y el criterio uniforme de longitud Unicode.
+- [cambio] 2026-11-16 — Se documentan el límite técnico de stock y el orden determinista del listado.

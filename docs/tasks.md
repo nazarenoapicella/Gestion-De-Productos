@@ -1,8 +1,8 @@
 # Plan de tareas — Stock Simple
 
-**Estado:** COMPLETADO según confirmación del equipo. Todas las tareas T-01 a T-23 se encuentran implementadas, verificadas y cerradas.  
-**Última actualización:** 2026-11-15.  
-**Contrato funcional:** [`spec.md`](spec.md).  
+**Estado:** COMPLETADO según confirmación del equipo. Todas las tareas T-01 a T-23 se encuentran implementadas, verificadas y cerradas.
+**Última actualización:** 2026-11-15.
+**Contrato funcional:** [`spec.md`](spec.md).
 **Plan técnico:** [`plan.md`](plan.md).
 
 Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técnica. Cada tarea tiene un agente responsable, alcance acotado, reglas e historias relacionadas, dependencias y casos concretos para comprobar su finalización.
@@ -51,7 +51,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
 
 - [x] **T-03 — Implementar validación y normalización de productos**
   - **Agente:** Backend.
-  - **Qué hace:** centralizar en el servicio las reglas de creación y edición: campos obligatorios, recorte de espacios, límites de longitud, precio en ARS y stock inicial. La edición cambia nombre, descripción, categoría, precio y stock; el stock se valida como entero no negativo.
+  - **Qué hace:** centralizar en el servicio las reglas de creación y edición: campos obligatorios, recorte de espacios, límites de longitud, precio en ARS y stock inicial. La edición cambia nombre, descripción, categoría, precio y stock; el stock se valida como entero seguro no negativo, hasta `Number.MAX_SAFE_INTEGER`.
   - **Archivos previstos:** `backend/src/services/products.service.js` y pruebas del servicio.
   - **RN / HU:** RN-01, RN-02, RN-03, RN-04, RN-05, RN-18; HU-02 y HU-03.
   - **Depende de:** T-02.
@@ -60,7 +60,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     2. Crear con nombre compuesto solo por espacios o categoría vacía se rechaza y no crea ningún registro.
     3. Se aceptan los precios textuales `"0"` y `"1250.50"`; se rechazan `"-1"`, `"abc"` y `"1250.505"`.
     4. Se aceptan nombres de 100 caracteres, descripciones de 500 caracteres y categorías de 50 caracteres; se rechazan, respectivamente, 101, 501 y 51 caracteres.
-    5. Se acepta stock inicial `0`; se rechazan `-1`, `1.5` y un valor no numérico.
+    5. Se acepta stock inicial `0` y el máximo entero seguro; se rechazan `-1`, `1.5`, un valor no numérico y cualquier entero superior a `Number.MAX_SAFE_INTEGER`.
     6. Un producto con stock `5` recibe una edición válida que incluye `stock: 99`; los datos comerciales y el stock quedan actualizados en la misma operación.
     7. Una edición inválida deja sin cambios todos los valores previos del producto.
 
@@ -133,7 +133,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
     2. Enviar nombre vacío o categoría vacía responde `400` y la cantidad de productos no aumenta.
     3. Enviar precio `"-1"`, `"abc"` o `"1250.505"` responde `400` y no crea registros.
     4. Enviar stock `-1` o `1.5` responde `400` y no crea registros.
-    5. Enviar un producto válido con nombre ya existente crea un segundo registro independiente, no reemplaza el primero.
+    5. Enviar un nombre ya existente después de normalizar mayúsculas, minúsculas, tildes y espacios responde `400`; no se crea un segundo registro y el producto original permanece sin cambios.
 
 - [x] **T-09 — Implementar edición de productos en la API**
   - **Agente:** Backend.
@@ -258,10 +258,10 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
   - **Depende de:** T-11 y T-13.
   - **Terminada cuando se compruebe:**
     1. Abrir Editar precarga el stock actual del producto.
-    2. Un stock entero no negativo se guarda junto con los demás campos comerciales.
-    3. Cantidades negativas, decimales o no numéricas se rechazan sin llamar a la API.
+    2. Un stock entero seguro no negativo se guarda junto con los demás campos comerciales; un valor decimal, negativo o fuera del rango seguro se rechaza.
+    3. Cantidades negativas, decimales, no numéricas o mayores que `Number.MAX_SAFE_INTEGER` se rechazan sin llamar a la API.
     4. Si el servidor falla, la interfaz informa el error y no simula el cambio.
-    5. La operación queda cubierto por pruebas frontend y backend ejecutadas y aprobadas: `frontend/test/t18.test.js` y la suite de backend completa.
+    5. La operación queda cubierta por pruebas frontend y backend ejecutadas y aprobadas: `frontend/test/t18.test.js` y la suite de backend completa.
 
 - [x] **T-19 — Mostrar y actualizar el resumen del inventario**
   - **Agente:** Frontend.
@@ -291,7 +291,7 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
   - **Terminada cuando se compruebe:**
     1. Crear `Mouse` con precio `1250.50` y stock `5` lo muestra en el listado y produce resumen `1` producto, `5` unidades y `1` producto con stock bajo.
     2. Editar el producto y establecer el stock en `7` cambia el resumen a `1`, `7`, `0`.
-    3. Intentar guardar un stock negativo o decimal produce un error; el stock y el resumen no cambian.
+    3. Intentar guardar un stock negativo, decimal, no numérico o fuera del rango entero seguro produce un error; el stock y el resumen no cambian.
     4. Una edición válida que incluya `stock: 99` actualiza el stock real en la misma operación que los demás campos.
     5. Buscar por nombre y categoría combinados devuelve solo la coincidencia esperada; una búsqueda sin coincidencias muestra el estado vacío correspondiente.
     6. Cancelar un borrado conserva el producto; confirmarlo lo elimina y actualiza el resumen.
@@ -309,38 +309,11 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
   - **Terminada cuando se compruebe:**
     1. Siguiendo el README desde una copia limpia del repositorio, se pueden instalar las dependencias, ejecutar las pruebas e iniciar la aplicación con los comandos documentados.
     2. Con los comandos del README, crear `Mouse` con stock `5`, reiniciar el servidor y volver a consultar el producto devuelve el mismo stock `5`.
-    3. El README explica que la versión sin autenticación es solo para uso local o controlado y no debe publicarse abiertamente en Internet.
+    3. El README explica que la demo pública sin autenticación es exclusivamente para evaluación académica, utiliza datos ficticios/de prueba y no debe recibir datos reales ni tratarse como una instancia de producción.
     4. Los comandos documentados fueron ejecutados realmente; no quedan marcadores de posición ni instrucciones inventadas.
   - **Verificación:** `cd backend && npm install`, `npm run db:init`, `npm start`, `curl http://localhost:3000/api/products`, `curl http://localhost:3000/api/summary`, `npm test` y `git --no-pager diff --check`.
 
 ---
-
-## Trazabilidad resumida
-
-| Área de `spec.md` | Tareas principales |
-|---|---|
-| Modelo de datos y persistencia | T-01, T-02, T-20, T-21 |
-| RN-01 a RN-05: datos y edición | T-03, T-08, T-09, T-14, T-15 |
-| RN-06 y RN-07: ajuste de stock | T-04, T-11, T-18 |
-| RN-08 a RN-11: indicadores | T-06, T-12, T-19 |
-| RN-12 a RN-15: consulta y filtros | T-05, T-07, T-17 |
-| RN-16: eliminación | T-02, T-10, T-16 |
-| RN-17 y RN-18: persistencia y validación en backend | T-01 a T-12, T-20, T-21 |
-| HU-01: consultar inventario | T-02, T-05, T-07, T-13, T-20 |
-| HU-02: registrar producto | T-01, T-03, T-08, T-14, T-20 |
-| HU-03: editar producto | T-02, T-03, T-09, T-15, T-20 |
-| HU-04: eliminar producto | T-02, T-10, T-16, T-20 |
-| HU-05: buscar y filtrar | T-05, T-07, T-17, T-20 |
-| HU-06: ajustar stock | T-01, T-04, T-11, T-18, T-20 |
-| HU-07: resumen y reposición | T-06, T-12, T-19, T-20 |
-
-## Historial de cambios
-
-- [cambio] 2026-10-28 — Se crea el backlog inicial, ordenado por dependencias, con criterios de finalización verificables derivados de las reglas, historias de usuario y casos límite de `spec.md`.
-- [cambio] 2026-10-28 — Se alinean el criterio de precio de T-03 y el ejemplo de T-08 con D-015, que define `price` como texto decimal exacto.
-- [cambio] 2026-10-28 — Se cierra T-18 con ajuste de stock en la interfaz y pruebas ejecutadas en frontend y backend, manteniendo la separación de responsabilidades entre `api.js` y `app.js`.
-- [cambio] 2026-11-02 — Se corrigen criterios contradictorios sobre nombre único, categorías reutilizables y edición separada del stock; se amplían los casos de validación de la API.
-
 
 - [x] **T-22 — Presupuestos, reservas transaccionales y PDF**
   - **Agente:** Backend, base de datos y QA.
@@ -356,6 +329,34 @@ Este archivo divide el MVP en cambios pequeños, ordenados por dependencia técn
   - **Depende de:** T-01 a T-22.
   - **Resultado:** completado según confirmación del equipo. La migración `pending` → `issued` cuenta con prueba automatizada de preservación de registros, líneas y claves foráneas (`backend/test/database.migration.test.js`). La interfaz y las pruebas de aceptación utilizan el estado visible **Emitido**.
 
-## Historial de cambios
+## Trazabilidad resumida
 
+| Área de `spec.md` | Tareas principales |
+|---|---|
+| Modelo de datos y persistencia | T-01, T-02, T-20, T-21 |
+| RN-01 a RN-05: datos y edición | T-03, T-08, T-09, T-14, T-15 |
+| RN-06 y RN-07: ajuste de stock | T-04, T-11, T-18 |
+| RN-08 a RN-11: indicadores | T-06, T-12, T-19 |
+| RN-12 a RN-15: consulta y filtros | T-05, T-07, T-17 |
+| RN-16: eliminación | T-02, T-10, T-16 |
+| RN-17 y RN-18: persistencia y validación en backend | T-01 a T-12, T-20, T-21, T-23 |
+| RN-19 y RN-20: presupuestos, reservas y PDF | T-22, T-23 |
+| RN-21 y RN-22: resolución e integridad de reservas | T-22, T-23 |
+| HU-01: consultar inventario | T-02, T-05, T-07, T-13, T-20 |
+| HU-02: registrar producto | T-01, T-03, T-08, T-14, T-20 |
+| HU-03: editar producto | T-02, T-03, T-09, T-15, T-20 |
+| HU-04: eliminar producto | T-02, T-10, T-16, T-20 |
+| HU-05: buscar y filtrar | T-05, T-07, T-17, T-20 |
+| HU-06: ajustar stock | T-01, T-04, T-11, T-18, T-20 |
+| HU-07: resumen y reposición | T-06, T-12, T-19, T-20 |
+| HU-08: crear y descargar presupuestos | T-22, T-23 |
+| HU-09: resolver presupuestos | T-22, T-23 |
+
+## Historial de cambios
+- [cambio] 2026-10-28 — Se crea el backlog inicial, ordenado por dependencias, con criterios de finalización verificables derivados de las reglas, historias de usuario y casos límite de `spec.md`.
+- [cambio] 2026-10-28 — Se alinean el criterio de precio de T-03 y el ejemplo de T-08 con D-015, que define `price` como texto decimal exacto.
+- [cambio] 2026-10-28 — Se cierra T-18 con ajuste de stock en la interfaz y pruebas ejecutadas en frontend y backend, manteniendo la separación de responsabilidades entre `api.js` y `app.js`.
+- [cambio] 2026-11-02 — Se corrigen criterios contradictorios sobre nombre único, categorías reutilizables y edición separada del stock; se amplían los casos de validación de la API.
 - [cambio] 2026-11-15 — Se agrega la trazabilidad explícita de presupuestos (T-22), el cierre documental y de seguridad básica (T-23), y la unificación del estado operativo de presupuesto en `issued` con migración SQLite compatible.
+
+- [cambio] 2026-11-16 — Se corrige el criterio T-08 sobre nombres duplicados, se reubican T-22/T-23 dentro del backlog y se completa la trazabilidad de RN-19 a RN-22 y HU-08/HU-09.

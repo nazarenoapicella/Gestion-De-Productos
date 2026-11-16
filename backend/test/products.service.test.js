@@ -154,6 +154,7 @@ const invalidCreateInputs = [
   ["stock negativo", { stock: -1 }],
   ["stock decimal", { stock: 1.5 }],
   ["stock no numérico", { stock: "abc" }],
+  ["stock fuera del rango entero seguro", { stock: Number.MAX_SAFE_INTEGER + 1 }],
 ];
 
 for (const [label, overrides] of invalidCreateInputs) {
@@ -168,6 +169,17 @@ for (const [label, overrides] of invalidCreateInputs) {
     });
   });
 }
+
+test("crear acepta el máximo entero seguro de stock", () => {
+  withDatabase((database) => {
+    const repository = createRepository(database);
+    const created = createProduct(
+      repository,
+      createInput({ stock: Number.MAX_SAFE_INTEGER }),
+    );
+    assert.equal(created.stock, Number.MAX_SAFE_INTEGER);
+  });
+});
 
 test("crear acepta los límites máximos de nombre, descripción y categoría", () => {
   withDatabase((database) => {
@@ -315,6 +327,7 @@ const invalidUpdateInputs = [
   ["stock negativo", { stock: -1 }],
   ["stock decimal", { stock: 1.5 }],
   ["stock no numérico", { stock: "abc" }],
+  ["stock fuera del rango entero seguro", { stock: Number.MAX_SAFE_INTEGER + 1 }],
 ];
 
 for (const [label, overrides] of invalidUpdateInputs) {

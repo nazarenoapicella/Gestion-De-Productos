@@ -10,7 +10,7 @@ Consultar los documentos en este orden:
 2. `docs/decisiones.md`: decisiones de producto y tecnología que ya fueron adoptadas.
 3. `docs/plan.md`: arquitectura implementada y detalles técnicos. Debe respetar el contrato funcional y no puede inventar reglas de negocio.
 4. `docs/preguntas-abiertas.md`: decisiones de alcance futuro ya cerradas y excluidas del MVP vigente.
-5. `docs/ideas.md`: intención original y contexto del proyecto.
+5. `docs/idea.md`: intención original y contexto del proyecto.
 6. `docs/glosario.md`: significado de términos del dominio.
 
 Si dos documentos se contradicen, no elegir silenciosamente una versión. Identificar la contradicción, explicar qué partes afecta y proponer la corrección documental más pequeña. `spec.md` y las decisiones adoptadas prevalecen sobre el diseño técnico de `plan.md`; si el plan necesita cambiar el comportamiento observable, documentar el cambio y resolverlo antes de implementarlo. La especificación no debe cambiar solo para acomodarse a una implementación que se desvió de lo acordado.
@@ -36,6 +36,7 @@ Si dos documentos se contradicen, no elegir silenciosamente una versión. Identi
 - No insertar texto introducido por el usuario en el DOM como HTML sin sanitización. Preferir APIs seguras como `textContent`.
 - Mantener mensajes de error comprensibles para el usuario y evitar exponer trazas, consultas SQL o detalles internos.
 - No incluir credenciales ni secretos en el repositorio. Usar variables de entorno documentadas en archivos de ejemplo.
+- La arquitectura actual sirve frontend y API desde el mismo origen: no agregues CORS permisivo ni `Access-Control-Allow-Origin: *`. Si se separan los orígenes, configurá una allowlist exacta del frontend. CORS no es autenticación.
 - No añadir autenticación, ventas, compras, proveedores, facturación, permisos o servicios externos al MVP sin una decisión expresa.
 
 ## 4. Cómo trabajar
@@ -104,7 +105,20 @@ Se trabaja **una sola tarea por vez**, siguiendo el orden de dependencias de `do
 
 **Condición de cierre:** pruebas ejecutadas y aprobadas + veredicto **APROBADO** + commit funcional con el identificador de tarea + estado `[x]` en `docs/tasks.md` versionado en Git. Si falta cualquiera de estos elementos, la tarea no está cerrada.
 
-## 6. Coordinación entre roles
+## 6. Agentes y reglas por rol
+
+| Agente | Responsabilidad | Archivo de reglas |
+|---|---|---|
+| Analista funcional | Mantener idea, preguntas, decisiones, glosario y contrato RN/HU. | `rules/analista-funcional.mdc` |
+| Arquitecto | Definir arquitectura, datos, API y secuencia de tareas. | `rules/arquitectura.mdc` |
+| Backend | Implementar endpoints y reglas en el servidor. | `rules/backend.mdc` |
+| Base de datos | Mantener esquema, restricciones, transacciones y migraciones. | `rules/base-de-datos.mdc` |
+| Frontend | Implementar pantallas y comunicación con la API. | `rules/frontend.mdc` |
+| QA / Tester | Diseñar y ejecutar pruebas a partir de RN, HU y casos límite. | `rules/testing-qa.mdc` |
+| Documentación | Mantener README e informes alineados con el comportamiento comprobado. | `rules/documentacion.mdc` |
+| Revisor | Comparar cada cambio con la spec, tareas, plan y evidencia de pruebas; emitir APROBADO/RECHAZADO. | `rules/revisor.mdc` |
+
+## 7. Coordinación entre roles
 
 - El **analista funcional** mantiene la coherencia entre necesidad, decisiones, preguntas y especificación.
 - El **arquitecto** propone la estructura técnica mínima necesaria.
@@ -113,6 +127,7 @@ Se trabaja **una sola tarea por vez**, siguiendo el orden de dependencias de `do
 - El **agente de frontend** implementa la interfaz y la comunicación con la API.
 - El **agente de QA** verifica los criterios de aceptación y los casos límite.
 - El **agente de documentación** mantiene documentos claros y sincronizados con el sistema real.
+- El **revisor** es un rol independiente de QA: no reemplaza las pruebas, sino que verifica el diff, la trazabilidad y la evidencia antes del commit.
 
 Si un agente detecta que necesita cambiar el contrato de la API o una regla de negocio para completar su tarea, debe informarlo y proponer el cambio antes de implementarlo.
 
@@ -121,3 +136,5 @@ Si un agente detecta que necesita cambiar el contrato de la API o una regla de n
 - [cambio] 2026-10-22 — Se establecen instrucciones generales, fuentes de verdad y responsabilidades de los agentes.
 - [cambio] 2026-10-28 — Se incluye `docs/plan.md` como documento técnico subordinado al contrato funcional y se formaliza el orden previo a implementar.
 - [cambio] 2026-10-28 — Se formaliza el ciclo obligatorio por tarea: pruebas primero, implementación, revisión, commit y cierre en `docs/tasks.md`.
+
+- [cambio] 2026-11-16 — Se incorpora la regla del revisor, se explicitan los responsables por rol y se documenta la política same-origin/CORS.

@@ -167,6 +167,7 @@ const invalidInputs = [
   ["precio con más de dos decimales", { ...validInput, price: "1250.505" }],
   ["stock negativo", { ...validInput, stock: -1 }],
   ["stock decimal", { ...validInput, stock: 1.5 }],
+  ["stock fuera del rango entero seguro", { ...validInput, stock: Number.MAX_SAFE_INTEGER + 1 }],
 ];
 
 for (const [description, input] of invalidInputs) {

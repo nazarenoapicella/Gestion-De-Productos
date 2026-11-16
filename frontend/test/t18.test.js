@@ -384,22 +384,24 @@ test('T-18: el stock se edita desde el formulario del producto y no hay acción 
   assert.equal(screen.dom.document.getElementById('stock-adjustment-panel'), null);
 });
 
-test('T-18: rechaza un stock decimal desde el formulario de edición sin llamar a la API', async () => {
-  const screen = createAdjustmentScreen();
-  await settlePromises();
+test('T-18: rechaza stock decimal y fuera del rango seguro desde el formulario sin llamar a la API', async () => {
+  for (const invalidStock of ['1.5', String(Number.MAX_SAFE_INTEGER + 1)]) {
+    const screen = createAdjustmentScreen();
+    await settlePromises();
 
-  const row = findInventoryRow(screen.dom, 'Mouse inalámbrico');
-  const editButton = row.children[4].querySelectorAll('button').find((button) => button.textContent.trim() === 'Editar');
-  editButton.click();
-  const form = screen.dom.document.getElementById('edit-product-form');
-  form.elements.stock.value = '1.5';
-  form.dispatch('submit');
-  await settlePromises();
+    const row = findInventoryRow(screen.dom, 'Mouse inalámbrico');
+    const editButton = row.children[4].querySelectorAll('button').find((button) => button.textContent.trim() === 'Editar');
+    editButton.click();
+    const form = screen.dom.document.getElementById('edit-product-form');
+    form.elements.stock.value = invalidStock;
+    form.dispatch('submit');
+    await settlePromises();
 
-  const updateRequests = screen.requests.filter(({ options }) => options.method === 'PUT');
-  assert.equal(updateRequests.length, 0, 'El frontend debe validar antes de enviar la edición');
-  const error = screen.dom.document.getElementById('edit-form-error');
-  assert.ok(error, 'Debe existir un mensaje de validación accesible');
-  assert.match(error.textContent, /stock inicial|stock/i);
-  assert.equal(rowValues(findInventoryRow(screen.dom, 'Mouse inalámbrico'))[3], '5');
+    const updateRequests = screen.requests.filter(({ options }) => options.method === 'PUT');
+    assert.equal(updateRequests.length, 0, 'El frontend debe validar antes de enviar la edición');
+    const error = screen.dom.document.getElementById('edit-form-error');
+    assert.ok(error, 'Debe existir un mensaje de validación accesible');
+    assert.match(error.textContent, /stock/i);
+    assert.equal(rowValues(findInventoryRow(screen.dom, 'Mouse inalámbrico'))[3], '5');
+  }
 });

@@ -1,0 +1,44 @@
+# Reglas del agente — Revisor
+
+## Objetivo del rol
+
+Verificar de manera independiente que cada cambio satisface la tarea asignada, el contrato de `docs/spec.md` y las decisiones vigentes. El revisor no reemplaza al tester y no debe aprobar basándose solo en una descripción del desarrollador.
+
+## Material que debe leer
+
+- `AGENTS.md` y este archivo.
+- La tarea correspondiente de `docs/tasks.md`.
+- Las RN, HU y casos límite relacionados de `docs/spec.md`.
+- Las decisiones afectadas de `docs/decisiones.md` y las secciones técnicas pertinentes de `docs/plan.md`.
+- Las pruebas automatizadas y el diff completo.
+
+## Lista de revisión
+
+1. Confirmar que el cambio implementa únicamente el alcance aprobado de la tarea.
+2. Comprobar que cada RN/HU relacionada tiene evidencia en pruebas o una verificación manual documentada.
+3. Verificar que las validaciones autoritativas están en backend y que los errores no dejan datos parcialmente modificados.
+4. Revisar consistencia entre contrato, plan, backlog, README y código.
+5. Revisar que no se debilitaron, eliminaron ni adaptaron pruebas para ocultar un defecto.
+6. Revisar consultas parametrizadas, manejo seguro del texto, secretos, persistencia y transacciones cuando sean pertinentes.
+7. Revisar que no se haya agregado CORS abierto. En la arquitectura actual same-origin no se necesita CORS; si se separan los orígenes, exigir allowlist exacta y no `*`.
+8. Comprobar que todos los comandos mencionados como verificados se ejecutaron realmente y que sus resultados se informan con precisión.
+
+## Veredicto obligatorio
+
+Emitir uno de estos dos resultados:
+
+- **APROBADO:** la tarea satisface sus criterios, las pruebas pertinentes pasan y no quedan defectos bloqueantes.
+- **RECHAZADO:** indicar cada incumplimiento concreto, archivo/criterio afectado y corrección necesaria. La tarea no se cierra ni se crea su commit hasta repetir la revisión.
+
+El informe de revisión debe identificar la tarea, el diff revisado, comandos y resultados observados, veredicto y limitaciones no comprobadas. No afirmar que se probó un despliegue en vivo si no se accedió a él.
+
+## No hacer
+
+- No modificar código, tests o documentación para aprobar tu propia revisión sin dejar constancia del cambio y de su motivo.
+- No aprobar únicamente porque la suite global pasa: comparar también cada RN/HU.
+- No confundir CORS con autenticación ni describir la demo sin login como segura para producción.
+- No inventar evidencia, capturas, fechas ni resultados.
+
+## Historial de cambios
+
+- [cambio] 2026-11-16 — Se incorpora la guía específica del rol revisor para completar el ciclo QA → desarrollo → revisión → commit.

@@ -1,43 +1,26 @@
-# Decisiones de alcance futuro — Stock Simple
+# Preguntas relevadas y decisiones de alcance — Stock Simple
 
-**Estado del documento:** CERRADO PARA EL MVP.  
-**Estado de las decisiones:** todas las cuestiones de esta lista están resueltas como exclusiones explícitas del alcance de esta versión. No representan tareas abiertas ni requisitos incompletos.
+> Versión 1.1 · Estado: sin preguntas pendientes para el MVP · Última actualización: 2026-11-16
 
-Este documento registra funcionalidades que fueron consideradas durante el análisis y deliberadamente excluidas del MVP. El comportamiento actual queda definido por `spec.md` y `decisiones.md`.
+Este documento conserva las preguntas que se analizaron antes de implementar. Las respuestas son decisiones adoptadas por el equipo para delimitar el MVP académico; no se presentan como respuestas textuales de un cliente externo.
 
-## Funciones excluidas del MVP
+La prioridad expresa el impacto que hubiera tenido dejar cada pregunta sin resolver. Todas las preguntas que aparecen abajo están cerradas. Las funciones excluidas son decisiones de alcance y no tareas pendientes.
 
-### P-001 — Autenticación y gestión de usuarios
+| Prioridad | ID | Pregunta que se debía resolver | RN / HU afectadas | Impacto si no se resolvía | Decisión adoptada | Estado / destino |
+|---|---|---|---|---|---|---|
+| Crítica | P-001 | ¿Quién puede usar el sistema y cómo se protege la información? | RN-18; HU-01 a HU-09 | Sin usuarios ni permisos definidos, una demo pública podría exponer y permitir modificar datos sin control. | El MVP no tiene autenticación, roles ni sesiones. Se admite una demo pública solo para evaluación académica con datos ficticios/de prueba; no se usa para datos reales ni producción. | Cerrada · D-002; `spec.md` §2 |
+| Alta | P-002 | ¿Se necesita registrar cada entrada, salida o ajuste de stock como historial? | RN-04 a RN-07; HU-06, HU-07 | Sin respuesta no se puede determinar si el sistema debe auditar movimientos y motivos o mantener únicamente la cantidad actual. | No se incluye un libro de movimientos de stock. Se conserva stock actual y el historial de presupuestos. | Cerrada · D-014; fuera de alcance |
+| Alta | P-003 | ¿Se requiere importar o exportar el catálogo mediante CSV? | RN-01, RN-02, RN-17; HU-01, HU-02 | Cambia los formatos de intercambio, validaciones por lote y tratamiento de errores parciales. | No se importa ni exporta CSV en el MVP. El catálogo se administra desde la interfaz y la API. | Cerrada · `spec.md` §4 |
+| Alta | P-006 | ¿El frontend y el backend se publicarán en orígenes separados? | Requisitos no funcionales de seguridad y comunicación; HU-01 a HU-09 | Si se separan, el navegador bloquearía las respuestas cross-origin sin una política CORS explícita y una política abierta podría exponer la API a cualquier sitio. | La arquitectura vigente sirve frontend y API desde el mismo origen, con rutas relativas `/api`; no requiere CORS. Si se separan, se habilitará una allowlist exacta del frontend y nunca `*`. | Cerrada · D-003; `plan.md` §4.1 |
+| Media | P-004 | ¿El umbral de stock bajo debe poder configurarse por producto? | RN-08, RN-11; HU-07 | Sin un umbral definido, el indicador de reposición tendría resultados arbitrarios. | Se utiliza un umbral único fijo: stock menor o igual que cinco unidades. | Cerrada · D-009; RN-08 y RN-11 |
+| Media | P-005 | ¿Las categorías deben administrarse como registros independientes? | RN-02, RN-12, RN-13; HU-02, HU-03, HU-05 | Implicaría CRUD de categorías, relaciones, restricciones de borrado y migraciones. | La categoría es un texto reutilizable y normalizado dentro de cada producto; no tiene entidad ni pantalla propia. | Cerrada · D-005; RN-02 |
 
-- **Decisión:** el MVP no incluye inicio de sesión, roles ni gestión de sesiones.
-- **Alcance vigente:** uso local o controlado, sin exposición pública ni tratamiento de datos reales de producción.
-- **Motivo de exclusión:** autenticación, autorización, recuperación de contraseñas y gestión de sesiones conforman un alcance de seguridad separado.
+## Estado de cierre
 
-### P-002 — Historial de movimientos de stock
-
-- **Decisión:** el MVP conserva el stock actual y el historial comercial de presupuestos, pero no un libro de movimientos de stock.
-- **Alcance vigente:** no se registra cada ingreso, egreso, ajuste, fecha y motivo como entidad independiente.
-
-### P-003 — Importación y exportación de productos
-
-- **Decisión:** el MVP no incorpora importación ni exportación CSV.
-- **Alcance vigente:** la administración de productos se realiza desde la interfaz y la API implementadas.
-
-### P-004 — Umbral de stock bajo configurable por producto
-
-- **Decisión:** se utiliza un único umbral general fijo.
-- **Alcance vigente:** un producto se considera con stock bajo cuando tiene cinco unidades o menos.
-
-### P-005 — Administración independiente de categorías
-
-- **Decisión:** las categorías son textos normalizados asociados a los productos, no una entidad administrable independiente.
-- **Alcance vigente:** no existen pantallas ni endpoints separados para crear, editar o eliminar categorías.
-
-## Cierre
-
-Las cinco decisiones están tomadas y documentadas. Cualquier incorporación futura constituirá una ampliación de alcance independiente, que deberá especificarse y aprobarse como una nueva versión. No queda ninguna decisión por resolver para la entrega actual.
+P-001 a P-006 están respondidas y documentadas. **No quedan preguntas funcionales ni técnicas pendientes que bloqueen el MVP.** La demo pública sin autenticación es una excepción exclusivamente académica: solo debe usarse con datos ficticios/de prueba. Cambiar el alcance exige registrar una nueva decisión y actualizar `spec.md` y `plan.md` antes de desarrollar.
 
 ## Historial de cambios
 
-- [cambio] 2026-10-22 — Se registran funciones consideradas y excluidas del alcance inicial.
+- [cambio] 2026-10-22 — Se registran funcionalidades consideradas y excluidas del alcance inicial.
 - [cambio] 2026-11-15 — Se cierra el documento como catálogo de decisiones de alcance futuro; se elimina cualquier formulación que pudiera interpretarse como trabajo pendiente del MVP.
+- [cambio] 2026-11-16 — Se ordenan las preguntas por prioridad, se explicitan reglas/historias e impacto y se incorpora la decisión de demo académica y origen/CORS.

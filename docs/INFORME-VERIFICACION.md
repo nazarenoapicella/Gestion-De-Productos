@@ -1,6 +1,6 @@
 # Informe de verificación y cierre técnico — Stock Simple
 
-**Fecha de cierre documental:** 2026-11-15  
+**Fecha de cierre documental:** 2026-11-15
 **Estado global:** COMPLETADO.
 
 ## Resultado de aceptación
@@ -20,8 +20,8 @@ El responsable del proyecto confirma que se ejecutaron satisfactoriamente las su
 
 | Comprobación | Resultado |
 |---|---|
-| `cd frontend && node --test` | 52/52 aprobadas. |
-| `cd backend && node --test test/products.service.test.js test/stock.service.test.js test/budgets.service.test.js test/db.test.js test/database.migration.test.js` | 55/55 aprobadas. |
+| `cd frontend && npm test` | 52/52 aprobadas. |
+| `cd backend && npm test` | 141/141 aprobadas después de agregar casos de límite para stock seguro. |
 | `node --check` sobre los archivos JavaScript de backend y frontend | Sin errores de sintaxis. |
 
 ## Correcciones de consistencia y código incorporadas
@@ -55,4 +55,19 @@ Nota de proceso: las tareas T-22 y T-23 se confirmaron en commits agrupados ("ag
 
 ## Alcance vigente y cierre
 
-La ausencia de autenticación y el uso de SQLite local son decisiones explícitas del MVP y están documentadas como límites de alcance, no como tareas abiertas. El sistema está destinado a uso local o controlado. No quedan tareas, verificaciones ni decisiones funcionales abiertas dentro del alcance aprobado.
+La ausencia de autenticación y el uso de SQLite local son decisiones explícitas del MVP y están documentadas como límites de alcance, no como tareas abiertas. Se admite una demo pública únicamente para evaluación académica y con datos ficticios/de prueba; no es una instancia de producción ni debe recibir datos reales. No quedan tareas ni decisiones funcionales abiertas dentro del alcance aprobado.
+
+
+## Alineaciones documentales realizadas el 2026-11-16
+
+- Se utiliza el nombre singular `docs/idea.md` para el documento de idea para coincidir con el nombre de documento indicado en la consigna y se actualizan las referencias internas.
+- Se reescriben las nueve historias de `spec.md` con criterios numerados `CA-HU.N` en formato Dado/Cuando/Entonces y se agrega una matriz de trazabilidad RN-HU.
+- Se corrige el criterio de T-08 que afirmaba que se podía crear un producto con un nombre duplicado; ahora coincide con RN-01 y con el rechazo de duplicados del backend.
+- Se completa la trazabilidad de las reglas de presupuestos RN-19 a RN-22 y las historias HU-08 y HU-09 en `tasks.md`; las tareas T-22 y T-23 quedan ubicadas dentro del backlog, antes de la tabla de trazabilidad.
+- Se convierte `preguntas-abiertas.md` en un registro priorizado de preguntas, reglas/historias afectadas, impacto de no resolverlas y decisiones adoptadas.
+- Se agrega el rol Revisor con su regla específica `rules/revisor.mdc` y se lo incorpora a `AGENTS.md`; se documenta su independencia respecto de QA y su veredicto APROBADO/RECHAZADO.
+- Se documenta que frontend y API comparten origen y utilizan rutas relativas `/api`; por ese motivo no se necesita middleware CORS en la arquitectura vigente. Si en el futuro se separan los servicios, se exige una allowlist exacta y no `*`.
+- Se aclara que la demo pública es únicamente para evaluación académica y no debe contener datos reales, porque el MVP no incluye autenticación.
+- Se alinea la regla RN-04, el modelo de datos y las tareas con la validación implementada de stock como entero seguro hasta `Number.MAX_SAFE_INTEGER`; RN-15 y el plan especifican el desempate estable por `id ASC`.
+
+**Alcance de esta verificación:** se actualizaron documentos y reglas de agentes. No se afirma que la URL de despliegue haya sido abierta ni que el servicio en vivo se encuentre disponible en este momento.

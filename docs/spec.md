@@ -1,8 +1,8 @@
 # Especificación funcional — Stock Simple
 
-**Estado:** especificación vigente del MVP.  
-**Versión:** 1.1.  
-**Última actualización:** 2026-11-15.
+**Estado:** especificación vigente del MVP.
+**Versión:** 1.2.
+**Última actualización:** 2026-11-16.
 
 Este documento describe qué debe hacer la primera versión de Stock Simple. Debe servir como referencia común para quien solicita el sistema, quien lo analiza, quienes lo programan y los agentes de IA que colaboren. La implementación debe ajustarse a esta especificación; si se necesita otro comportamiento, primero debe revisarse y aprobarse el cambio documental.
 
@@ -16,8 +16,8 @@ La aplicación debe conservar los datos en una base de datos persistente y permi
 
 - **Usuario previsto:** una persona encargada de administrar el inventario.
 - **Comercio:** uno solo.
-- **Acceso en el MVP:** sin inicio de sesión; uso local o en entorno controlado.
-- **Limitación de seguridad:** no publicar la versión sin autenticación en Internet ni utilizarla para datos reales de producción. La publicación segura requiere una decisión y una implementación de seguridad por separado.
+- **Acceso en el MVP:** sin inicio de sesión; uso local o en entorno controlado. Se admite una demo pública únicamente para evaluación académica.
+- **Limitación de seguridad:** la demo pública no es una publicación segura de producción. Debe contener solo datos ficticios/de prueba; no se deben ingresar datos personales ni comerciales reales. No hay autenticación, autorización ni separación de datos por usuario.
 
 No hay roles, permisos diferentes ni administración de múltiples comercios en esta versión.
 
@@ -67,7 +67,7 @@ Cada producto deberá tener estos campos:
 | `description` | No | Texto opcional de hasta 500 caracteres. Si está vacío, se guarda como vacío o nulo de manera consistente. |
 | `category` | Sí | Texto recortado de espacios externos; debe quedar entre 1 y 50 caracteres. |
 | `price` | Sí | Precio en ARS; en la API se transporta como texto decimal no negativo, con hasta dos cifras decimales. |
-| `stock` | Sí | Número entero mayor o igual que cero. |
+| `stock` | Sí | Entero seguro de JavaScript entre 0 y `Number.MAX_SAFE_INTEGER`, inclusive. |
 | `createdAt` | Sí | Fecha y hora de creación generadas por el sistema. |
 | `updatedAt` | Sí | Fecha y hora de la última modificación relevante, generadas por el sistema. |
 
@@ -87,11 +87,11 @@ Al ingresar una categoría, se deben quitar los espacios al principio y al final
 
 ### RN-01 — Nombre obligatorio
 
-Un producto no puede crearse ni actualizarse con un nombre vacío después de quitar espacios externos. El nombre debe ser único cuando se normaliza para ignorar mayúsculas, minúsculas, tildes y espacios repetidos.
+Un producto debe tener un nombre de entre 1 y 100 caracteres Unicode después de quitar espacios externos. No puede crearse ni actualizarse con un nombre vacío. El nombre debe ser único cuando se normaliza para ignorar mayúsculas, minúsculas, tildes y espacios repetidos.
 
 ### RN-02 — Categoría obligatoria y reutilizable
 
-Un producto debe tener una categoría no vacía después de quitar espacios externos. Una misma categoría puede utilizarse en muchos productos. Si el texto ingresado coincide con una categoría existente al ignorar mayúsculas, minúsculas, tildes y espacios repetidos, el sistema reutiliza la escritura ya registrada.
+Un producto debe tener una categoría de entre 1 y 50 caracteres Unicode después de quitar espacios externos. Una misma categoría puede utilizarse en muchos productos. Si el texto ingresado coincide con una categoría existente al ignorar mayúsculas, minúsculas, tildes y espacios repetidos, el sistema reutiliza la escritura ya registrada.
 
 ### RN-03 — Validación del precio
 
@@ -99,7 +99,7 @@ El precio debe recibirse como texto decimal no negativo, sin separadores de mile
 
 ### RN-04 — Validación del stock
 
-El stock inicial y el stock resultante de cualquier ajuste deben ser números enteros mayores o iguales que cero. No se aceptan decimales, valores negativos ni cantidades no numéricas.
+El stock inicial y el stock resultante de cualquier actualización deben ser enteros seguros de JavaScript, mayores o iguales que cero y menores o iguales que `Number.MAX_SAFE_INTEGER`. No se aceptan decimales, valores negativos, cantidades no numéricas ni valores fuera del rango entero seguro. Este es un límite técnico para conservar la precisión, no un máximo comercial.
 
 ### RN-05 — Edición del producto y su stock disponible
 
@@ -143,7 +143,7 @@ Cuando hay búsqueda y categoría seleccionada, se muestran solo los productos q
 
 ### RN-15 — Orden del listado
 
-Los productos se muestran por nombre en orden alfabético ascendente. No hay paginación en el MVP.
+Los productos se muestran por nombre en orden alfabético ascendente (`name COLLATE NOCASE ASC`). Cuando dos nombres empatan en ese orden, se utiliza `id ASC` como criterio secundario para que el resultado sea determinista. No hay paginación en el MVP.
 
 ### RN-16 — Eliminación
 
@@ -177,113 +177,135 @@ Un producto asociado a un presupuesto emitido no se puede eliminar, para garanti
 
 ## 7. Historias de usuario y criterios de aceptación
 
+Los criterios se identifican como `CA-HU.N` y siguen el formato **Dado / Cuando / Entonces**. Cada historia indica las reglas de negocio que cubre. Los ejemplos son verificables mediante la interfaz, la API o las pruebas automatizadas, según corresponda.
+
 ### HU-01 — Consultar inventario
 
 **Como** encargado del comercio, **quiero** ver los productos registrados, **para** conocer la información y el stock disponible.
 
-Criterios de aceptación:
+**Reglas relacionadas:** RN-09, RN-10, RN-11, RN-15, RN-17 y RN-18.
 
-- Al abrir el inventario, se muestran los productos existentes ordenados por nombre.
-- Si no hay productos, aparece un estado vacío claro. La opción para registrar el primero se muestra cuando el formulario de alta esté implementado.
-- Cada fila muestra, como mínimo, nombre, categoría, precio y stock. Solo se muestran acciones que estén implementadas y se puedan operar; no se usan controles decorativos para funciones no implementadas.
-- Un error del servidor se informa sin mostrar una pantalla rota ni datos ficticios como si fueran reales.
+| ID | Criterio de aceptación |
+|---|---|
+| CA-01.1 | **Dado** que existen productos con distintos nombres, categorías, precios y cantidades, **cuando** abro el inventario, **entonces** se muestran ordenados alfabéticamente por nombre y cada fila presenta nombre, categoría, precio y stock. |
+| CA-01.2 | **Dado** que no hay productos registrados, **cuando** abro el inventario, **entonces** aparece un estado vacío claro y no se muestran filas ficticias. |
+| CA-01.3 | **Dado** que el servidor responde con un error, **cuando** intento consultar el inventario, **entonces** la interfaz informa el problema y no presenta una lista vacía como si fuera el resultado real. |
 
 ### HU-02 — Registrar producto
 
 **Como** encargado, **quiero** registrar un producto, **para** incorporarlo al inventario.
 
-Criterios de aceptación:
+**Reglas relacionadas:** RN-01, RN-02, RN-03, RN-04, RN-17 y RN-18.
 
-- El formulario solicita nombre, categoría, precio y stock inicial; la descripción es opcional.
-- Un envío válido crea un registro y este aparece en el inventario.
-- Un nombre o categoría vacío, un precio inválido o un stock inicial inválido no crean el producto.
-- Los espacios externos de nombre y categoría se quitan antes de guardar.
-- El identificador y las marcas de tiempo los genera el sistema.
+| ID | Criterio de aceptación |
+|---|---|
+| CA-02.1 | **Dado** que completo nombre, categoría, precio y stock con datos válidos, **cuando** envío el formulario de alta, **entonces** se crea el producto y el servidor genera su identificador y sus marcas de tiempo. |
+| CA-02.2 | **Dado** que ingreso espacios externos en nombre y categoría, **cuando** guardo el producto, **entonces** se quitan esos espacios antes de persistir los valores. |
+| CA-02.3 | **Dado** que ya existe una categoría equivalente por mayúsculas, tildes o espacios repetidos, **cuando** registro un producto usando otra variante, **entonces** se reutiliza la escritura canónica existente. |
+| CA-02.4 | **Dado** que el nombre está vacío, supera 100 caracteres o ya existe otro nombre equivalente, **cuando** envío el alta, **entonces** el backend rechaza la operación y no crea un registro. |
+| CA-02.5 | **Dado** que el precio es negativo, no numérico, contiene más de dos decimales, separadores de miles o notación exponencial, **cuando** envío el alta, **entonces** el backend lo rechaza y no crea el producto. Un precio igual a cero sí se acepta. |
+| CA-02.6 | **Dado** que el stock inicial es negativo, decimal, no numérico o no puede representarse como entero seguro, **cuando** envío el alta, **entonces** el backend rechaza la operación y no crea el producto. |
+| CA-02.7 | **Dado** que omito la descripción o la envío vacía, **cuando** registro un producto válido, **entonces** la descripción queda ausente o vacía de forma consistente, según el contrato de persistencia. |
 
 ### HU-03 — Editar producto
 
 **Como** encargado, **quiero** modificar los datos de un producto, **para** mantener el catálogo actualizado.
 
-Criterios de aceptación:
+**Reglas relacionadas:** RN-01, RN-02, RN-03, RN-04, RN-05, RN-17, RN-18 y RN-22.
 
-- El formulario muestra los valores actuales del producto.
-- Se pueden cambiar nombre, descripción, categoría, precio y stock disponible desde el mismo formulario de edición. El stock debe ser un entero seguro no negativo.
-- Una actualización inválida no reemplaza parcialmente los datos existentes.
-- Si el producto no existe, se informa que no fue encontrado.
-- El nombre es único con normalización de mayúsculas, minúsculas y tildes. Las categorías se pueden reutilizar entre productos; las variantes equivalentes conservan una misma escritura canónica.
+| ID | Criterio de aceptación |
+|---|---|
+| CA-03.1 | **Dado** un producto existente, **cuando** actualizo nombre, descripción, categoría, precio y stock con valores válidos, **entonces** el servidor guarda todos los cambios en una única operación y devuelve el producto actualizado. |
+| CA-03.2 | **Dado** un producto existente, **cuando** envío un cambio con nombre duplicado normalizado o con cualquier otro campo inválido, **entonces** se rechaza la edición completa y permanecen intactos todos los valores anteriores. |
+| CA-03.3 | **Dado** un producto incluido en un presupuesto emitido, **cuando** modifico su nombre o precio en el catálogo, **entonces** el presupuesto conserva el nombre y precio capturados al momento de su emisión. |
+| CA-03.4 | **Dado** un identificador que no corresponde a ningún producto, **cuando** intento editarlo, **entonces** la API responde que el producto no existe y no modifica otros registros. |
 
 ### HU-04 — Eliminar producto
 
 **Como** encargado, **quiero** eliminar un producto, **para** quitar registros que ya no necesito.
 
-Criterios de aceptación:
+**Reglas relacionadas:** RN-16, RN-17, RN-18 y RN-22.
 
-- Antes de borrar, la interfaz pide confirmación e identifica el producto.
-- Si se cancela, el registro permanece.
-- Si se confirma, el registro se elimina y deja de aparecer en el listado y en los indicadores.
-- Un error al eliminar se informa y no se finge que el borrado tuvo éxito.
+| ID | Criterio de aceptación |
+|---|---|
+| CA-04.1 | **Dado** un producto visible en el inventario, **cuando** inicio su eliminación, **entonces** la interfaz solicita confirmación e identifica el producto. |
+| CA-04.2 | **Dado** que está abierta la confirmación de eliminación, **cuando** cancelo, **entonces** no se envía la petición `DELETE` y el producto permanece en el inventario. |
+| CA-04.3 | **Dado** un producto que no tiene una reserva activa y confirmo su eliminación, **cuando** el backend procesa el pedido, **entonces** elimina únicamente ese producto y la interfaz actualiza el listado y los indicadores. |
+| CA-04.4 | **Dado** un producto asociado a un presupuesto emitido, **cuando** intento eliminarlo, **entonces** el backend rechaza la operación para preservar la posibilidad de devolver el stock reservado. |
+| CA-04.5 | **Dado** un identificador inexistente, **cuando** solicito eliminarlo, **entonces** la API responde `404` y no modifica ningún otro producto. |
 
 ### HU-05 — Buscar y filtrar
 
 **Como** encargado, **quiero** buscar por nombre y filtrar por categoría, **para** encontrar productos rápidamente.
 
-Criterios de aceptación:
+**Reglas relacionadas:** RN-12, RN-13, RN-14 y RN-15.
 
-- La búsqueda acepta coincidencias parciales sin distinguir mayúsculas y minúsculas.
-- El filtro de categoría coincide con la categoría completa sin distinguir mayúsculas y minúsculas.
-- Es posible combinar búsqueda y categoría.
-- Si no hay coincidencias, se informa que no se encontraron productos.
-- Borrar el texto de búsqueda y seleccionar “Todas las categorías” vuelve a mostrar todos los productos; no se requieren botones separados para buscar o limpiar.
+| ID | Criterio de aceptación |
+|---|---|
+| CA-05.1 | **Dado** que existen productos con nombres que contienen el término buscado, **cuando** escribo una parte del nombre en el campo de búsqueda, **entonces** aparecen las coincidencias parciales sin distinguir mayúsculas y minúsculas. |
+| CA-05.2 | **Dado** que existen productos con categorías normalizadas, **cuando** selecciono una categoría, **entonces** aparecen solo los productos de esa categoría, ignorando mayúsculas, tildes y espacios repetidos. |
+| CA-05.3 | **Dado** que hay un término de búsqueda y una categoría seleccionada, **cuando** aplico ambos filtros, **entonces** aparecen únicamente los productos que cumplen las dos condiciones. |
+| CA-05.4 | **Dado** que hay filtros activos, **cuando** borro el texto de búsqueda y elijo “Todas las categorías”, **entonces** vuelve a mostrarse el inventario completo. |
+| CA-05.5 | **Dado** que ningún producto coincide con los filtros, **cuando** consulto el resultado, **entonces** se muestra un estado sin resultados y no un error técnico. |
 
 ### HU-06 — Actualizar el stock desde el formulario de edición
 
 **Como** encargado, **quiero** modificar el stock disponible dentro del formulario de edición del producto, **para** mantener actualizada la cantidad de unidades sin utilizar una acción separada.
 
-Criterios de aceptación:
+**Reglas relacionadas:** RN-04, RN-05, RN-06, RN-07 y RN-18.
 
-- El formulario de edición muestra el stock disponible actual, igual que el formulario de creación.
-- El stock se ingresa como un entero seguro mayor o igual que cero; se rechazan valores negativos, decimales, vacíos y no numéricos.
-- Guardar la edición envía los datos comerciales y el stock en una única operación.
-- Una edición inválida no modifica ningún campo ni el stock guardado.
-- La tabla y los indicadores se actualizan después de una respuesta exitosa.
-
-### HU-08 — Crear y descargar presupuestos
-
-**Como** encargado, **quiero** seleccionar productos y cantidades, **para** emitir un presupuesto con el detalle y el precio total en PDF.
-
-Criterios de aceptación:
-
-- El formulario permite seleccionar productos mediante un `select` y escribir cantidades enteras positivas.
-- Solo se permiten productos con stock disponible y la cantidad no puede superar el stock actual.
-- Se muestra el precio unitario, subtotal por producto y total general antes de confirmar.
-- Al generar, el servidor vuelve a validar y reserva el stock de manera atómica.
-- Si falla cualquier línea, no se crea el presupuesto ni se descuenta parcialmente el stock.
-- Se descarga un PDF con el número, la fecha, el detalle y el total.
-
-### HU-09 — Resolver presupuestos
-
-**Como** encargado, **quiero** marcar un presupuesto como pagado o rechazado, **para** reflejar el resultado de la operación y mantener el inventario correcto.
-
-Criterios de aceptación:
-
-- Los presupuestos con estado `issued` se muestran en una lista propia con el rótulo visible **Emitido**.
-- Al marcar uno como pagado, desaparece de la lista de emitidos, queda en el historial con estado `paid` y el stock no cambia.
-- Al rechazarlo, desaparece de la lista de emitidos, queda en el historial con estado `rejected` y se restaura el stock reservado.
-- Un presupuesto resuelto no puede volver a resolverse ni devolver stock por segunda vez.
-- Mientras existan reservas activas, el producto relacionado no se puede eliminar.
-- Cada presupuesto conserva los nombres y precios que tenía cuando se generó, incluso si después se modifica el catálogo.
+| ID | Criterio de aceptación |
+|---|---|
+| CA-06.1 | **Dado** un producto existente, **cuando** abro su formulario de edición, **entonces** el campo de stock muestra la cantidad disponible actual. |
+| CA-06.2 | **Dado** un stock nuevo que es un entero seguro mayor o igual a cero, **cuando** guardo la edición, **entonces** el valor se actualiza junto con los datos comerciales mediante una única petición. |
+| CA-06.3 | **Dado** que ingreso un stock negativo, decimal, vacío, no numérico o superior a `Number.MAX_SAFE_INTEGER`, **cuando** intento guardar, **entonces** el backend rechaza la operación y no cambia ni los datos comerciales ni el stock anterior. |
+| CA-06.4 | **Dado** que el backend confirma una edición de stock, **cuando** la interfaz recibe la respuesta exitosa, **entonces** actualiza el valor en la tabla y los indicadores del inventario. |
+| CA-06.5 | **Dado** un producto con stock 8, **cuando** la API histórica recibe un aumento de 3 unidades, **entonces** el stock resultante es 11. |
+| CA-06.6 | **Dado** un producto con stock 11, **cuando** la API histórica recibe una disminución de 4 unidades, **entonces** el stock resultante es 7; si solicita disminuir 8, la operación se rechaza y el stock permanece en 7. |
+| CA-06.7 | **Dado** un ajuste con cantidad cero, negativa, decimal, no segura o una operación desconocida, **cuando** llega al endpoint histórico, **entonces** la API lo rechaza sin modificar el stock. |
 
 ### HU-07 — Consultar resumen y reposición
 
 **Como** encargado, **quiero** ver los indicadores del inventario, **para** conocer el estado general y detectar productos que necesitan reposición.
 
-Criterios de aceptación:
+**Reglas relacionadas:** RN-08, RN-09, RN-10, RN-11 y RN-17.
 
-- Se muestran los productos registrados, las unidades en stock y los productos con stock bajo.
-- Se considera stock bajo una cantidad menor o igual que cinco.
-- Los productos con stock cero también aparecen identificados como stock bajo.
-- Los indicadores se actualizan después de crear, editar (incluido el stock), eliminar o reservar/devolver unidades mediante un presupuesto.
-- Si el inventario está vacío, los tres indicadores muestran cero.
+| ID | Criterio de aceptación |
+|---|---|
+| CA-07.1 | **Dado** un inventario con tres productos, **cuando** consulto el resumen, **entonces** el indicador de productos registrados cuenta tres registros y no la suma de sus unidades. |
+| CA-07.2 | **Dado** productos con stock 0, 5 y 6, **cuando** consulto el resumen, **entonces** hay dos productos con stock bajo porque el umbral es `stock <= 5`. |
+| CA-07.3 | **Dado** que creo, edito, elimino o reservo/devuelvo unidades mediante un presupuesto, **cuando** la operación termina correctamente, **entonces** los indicadores reflejan los datos actualizados. |
+| CA-07.4 | **Dado** que el inventario está vacío, **cuando** consulto el resumen, **entonces** productos registrados, unidades en stock y productos con stock bajo devuelven cero. |
+
+### HU-08 — Crear y descargar presupuestos
+
+**Como** encargado, **quiero** seleccionar productos y cantidades, **para** emitir un presupuesto con el detalle y el precio total en PDF.
+
+**Reglas relacionadas:** RN-19 y RN-20.
+
+| ID | Criterio de aceptación |
+|---|---|
+| CA-08.1 | **Dado** entre 1 y 50 productos distintos con stock suficiente, **cuando** confirmo un presupuesto con cantidades enteras positivas, **entonces** el servidor crea el presupuesto, captura las líneas y reserva el stock en una única transacción. |
+| CA-08.2 | **Dado** una cantidad cero, negativa, decimal o superior al stock disponible, **cuando** intento emitir el presupuesto, **entonces** el backend rechaza la operación sin crear el presupuesto ni modificar ninguna cantidad. |
+| CA-08.3 | **Dado** un presupuesto que contiene más de 50 productos o repite el mismo producto en varias líneas, **cuando** intento emitirlo, **entonces** el backend rechaza la solicitud completa. |
+| CA-08.4 | **Dado** un presupuesto con varias líneas donde una no tiene stock suficiente, **cuando** confirmo la emisión, **entonces** se revierte toda la transacción y ninguna línea descuenta stock. |
+| CA-08.5 | **Dado** productos cuyo nombre o precio puede cambiar después, **cuando** emito el presupuesto, **entonces** el servidor toma los datos vigentes desde la base y conserva una fotografía histórica independiente del catálogo. |
+| CA-08.6 | **Dado** un presupuesto emitido, **cuando** descargo su PDF desde el listado o detalle, **entonces** el documento incluye número, fecha, productos, cantidades, precios unitarios, subtotales y total en ARS. |
+
+### HU-09 — Resolver presupuestos
+
+**Como** encargado, **quiero** marcar un presupuesto como pagado o rechazado, **para** reflejar el resultado de la operación y mantener el inventario correcto.
+
+**Reglas relacionadas:** RN-19, RN-20, RN-21 y RN-22.
+
+| ID | Criterio de aceptación |
+|---|---|
+| CA-09.1 | **Dado** un presupuesto nuevo, **cuando** se confirma su creación, **entonces** queda en estado `issued` y la interfaz lo muestra como **Emitido**. |
+| CA-09.2 | **Dado** un presupuesto emitido con stock ya reservado, **cuando** lo marco como pagado, **entonces** pasa a `paid`, sale de la lista de emitidos, permanece en el historial y no devuelve stock. |
+| CA-09.3 | **Dado** un presupuesto emitido con stock reservado, **cuando** lo marco como rechazado, **entonces** pasa a `rejected`, sale de emitidos, permanece en el historial y devuelve exactamente una vez las cantidades reservadas. |
+| CA-09.4 | **Dado** un presupuesto ya resuelto, **cuando** intento cambiar su estado nuevamente, **entonces** el backend rechaza la transición y no altera el stock. |
+| CA-09.5 | **Dado** un producto asociado a un presupuesto emitido, **cuando** intento eliminarlo, **entonces** la operación se rechaza hasta que la reserva deje de estar activa. |
+| CA-09.6 | **Dado** un presupuesto en el historial, **cuando** consulto o vuelvo a descargar su detalle, **entonces** se conservan los nombres, precios, cantidades, subtotales y total originales aunque el catálogo haya cambiado. |
 
 ## 8. Casos límite y comportamiento esperado
 
@@ -339,12 +361,28 @@ Las solicitudes y respuestas intercambian JSON, salvo que una respuesta no tenga
 - **Accesibilidad básica:** HTML semántico, controles utilizables con teclado, etiquetas asociadas a sus campos y contraste legible.
 - **Consistencia:** ninguna operación inválida debe dejar los datos parcialmente actualizados.
 - **Persistencia:** usar SQLite y comprobar que los datos sobreviven al reinicio del servidor.
-- **Seguridad:** consultas parametrizadas, validación en servidor, manejo seguro del texto de usuario y ausencia de secretos en Git.
+- **Seguridad:** consultas parametrizadas, validación en servidor, manejo seguro del texto de usuario y ausencia de secretos en Git. La demo sin autenticación solo admite datos ficticios/de prueba.
+- **Origen/CORS:** el backend sirve los archivos del frontend y la API en el mismo origen; el frontend solicita rutas relativas `/api`, por lo que no se requiere middleware CORS. Si se separan los servicios, se debe permitir únicamente el origen exacto del frontend mediante una allowlist, sin `*`. CORS no sustituye autenticación ni autorización.
 - **Mantenibilidad:** código JavaScript legible, responsabilidades claras y dependencias limitadas.
 - **Errores:** mensajes entendibles para el usuario y detalles técnicos solo en registros de desarrollo apropiados.
 - **Idioma:** interfaz y mensajes en español.
 
-## 11. Criterios globales para considerar terminado el MVP
+## 11. Matriz de trazabilidad RN-HU
+
+| Reglas de negocio | Historias de usuario relacionadas |
+|---|---|
+| RN-01 a RN-04 | HU-02, HU-03, HU-06 |
+| RN-05 | HU-03, HU-06 |
+| RN-06 y RN-07 | HU-06 |
+| RN-08 a RN-11 | HU-07 |
+| RN-12 a RN-15 | HU-01, HU-05 |
+| RN-16 | HU-04 |
+| RN-17 y RN-18 | HU-01 a HU-09, en las operaciones que modifican o consultan datos |
+| RN-19 y RN-20 | HU-08, HU-09 |
+| RN-21 | HU-09 |
+| RN-22 | HU-03, HU-04, HU-08, HU-09 |
+
+## 12. Criterios globales para considerar terminado el MVP
 
 El MVP se considera terminado cuando:
 
@@ -356,9 +394,9 @@ El MVP se considera terminado cuando:
 6. El README contiene instrucciones reales y verificadas de instalación, ejecución y pruebas.
 7. No hay funcionalidades adicionales fuera de alcance que introduzcan reglas no aprobadas.
 
-## 12. Documentos relacionados
+## 13. Documentos relacionados
 
-- `ideas.md`: contexto y necesidad original.
+- `idea.md`: contexto y necesidad original.
 - `decisiones.md`: decisiones funcionales y técnicas adoptadas.
 - `preguntas-abiertas.md`: decisiones de alcance futuro expresamente excluidas del MVP actual.
 - `glosario.md`: terminología del dominio.
@@ -374,3 +412,5 @@ El MVP se considera terminado cuando:
 - [cambio] 2026-11-15 — Se unifica el estado de los presupuestos en `issued` (Emitido), `paid` y `rejected`, y se documenta la migración de bases anteriores.
 
 - [cambio] 2026-11-15 — Se actualizan los criterios globales para incluir las 9 HU y RN-01 a RN-22, incluyendo presupuestos y reservas.
+
+- [cambio] 2026-11-16 — Se normalizan las nueve historias con criterios Dado/Cuando/Entonces, se vinculan expresamente con sus RN y se alinea el alcance con la demo académica sin autenticación y la política same-origin/CORS.
