@@ -187,8 +187,7 @@ test("no permite eliminar productos con reservas activas y conserva la fotograf√
     const updated = await requestJson(`${baseUrl}/api/products/${product.id}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Router Wi-Fi nuevo", category: "Redes", price: "999.99", description: "Actualizado" }),
-    });
+      body: JSON.stringify({ name: "Router Wi-Fi nuevo", category: "Redes", price: "999.99", stock: 2, description: "Actualizado" }),    });
     assert.equal(updated.response.status, 200);
 
     const detail = await requestJson(`${baseUrl}/api/budgets/${created.body.id}`);

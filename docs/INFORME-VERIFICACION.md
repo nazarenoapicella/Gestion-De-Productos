@@ -39,6 +39,20 @@ El responsable del proyecto confirma que se ejecutaron satisfactoriamente las su
 - Se agregó una migración SQLite transaccional que convierte el valor histórico heredado `pending` a `issued` y conserva presupuestos, líneas e integridad referencial; el valor heredado no forma parte del contrato ni de los estados de la aplicación actual y la migración tiene una prueba automatizada dedicada.
 - Se verificó que la UI usa los identificadores y rótulos de presupuestos emitidos, y que no presenta el rótulo anterior.
 
+
+## Orden de las tareas y por qué
+
+Las 23 tareas se ordenaron por dependencia técnica (ver `docs/tasks.md`):
+
+1. **Primero los datos y las reglas (T-01 a T-06).** Esquema SQLite, repositorio, validación de productos y servicio de ajustes de stock. La regla más delicada del sistema es que el stock nunca sea negativo (disminuir más de lo disponible se rechaza), por eso se resolvió y probó antes de exponer cualquier ruta.
+2. **Después la API (T-07 a T-12).** Cada endpoint se apoya en servicios ya probados: lectura y listado, alta, edición, eliminación, ajuste de stock y resumen.
+3. **Después la interfaz (T-13 a T-19).** El listado (T-13) va primero porque el alta, la edición, la eliminación, la búsqueda y el ajuste de stock dependen de él.
+4. **Integración y documentación (T-20 y T-21).** Pruebas de punta a punta y documentación de ejecución, con el MVP base terminado.
+5. **Presupuestos al final (T-22).** Reservar stock en una transacción, devolverlo al rechazar y conservar el historial necesita productos y reglas de stock ya estables, por eso depende de T-01 a T-21.
+6. **Cierre (T-23).** Alineación de documentación, seguridad básica y migración del estado de presupuestos.
+
+Nota de proceso: las tareas T-22 y T-23 se confirmaron en commits agrupados ("agrego presupuestos" y "correciones finales de estructura") y no en un commit por tarea como T-01 a T-21.
+
 ## Alcance vigente y cierre
 
 La ausencia de autenticación y el uso de SQLite local son decisiones explícitas del MVP y están documentadas como límites de alcance, no como tareas abiertas. El sistema está destinado a uso local o controlado. No quedan tareas, verificaciones ni decisiones funcionales abiertas dentro del alcance aprobado.
