@@ -1,8 +1,21 @@
 # Stock Simple
 
-Aplicación web local para gestionar un catálogo de productos, el stock disponible, el resumen del inventario y el ciclo de presupuestos con reserva de stock.
+Aplicación web para gestionar un catálogo de productos, el stock disponible, el resumen del inventario y el ciclo de presupuestos con reserva de stock.
 
 > **Estado: COMPLETADO.** El equipo confirma la aprobación de las suites automatizadas completas de backend y frontend, los escenarios manuales, el flujo integral de presupuestos y la ejecución desde un clon limpio. La verificación técnica adicional y el cierre se detallan en [`docs/INFORME-VERIFICACION.md`](docs/INFORME-VERIFICACION.md).
+
+## Demo en línea
+
+**Aplicación publicada:** https://gestion-de-productos-k96u.onrender.com/
+
+Está desplegada en Render (plan gratuito) como un único servicio que sirve la API y la interfaz desde el mismo origen, por lo que no requiere configuración de CORS.
+
+- Si nadie la usó en los últimos 15 minutos, el primer acceso puede demorar alrededor de un minuto mientras el servicio se reactiva.
+- La base SQLite vive en el disco temporal del servicio: productos y presupuestos cargados se pierden cuando el servicio se reinicia o se vuelve a desplegar.
+- Variables de entorno configuradas en el panel de Render (no están en el repositorio): `NODE_VERSION=22`, `HOST=0.0.0.0`.
+- La demo no tiene autenticación: cualquiera que conozca la dirección puede ver y modificar los datos, por eso no debe cargarse información real.
+
+**Recorrido sugerido para probarla:** crear un producto con stock, editarlo para cambiar su stock, entrar en **Presupuestos**, generar un presupuesto (se descarga el PDF y el stock se descuenta) y marcarlo como **Rechazado** para ver que el stock reservado se devuelve.
 
 ## Objetivo de la primera versión
 
@@ -188,15 +201,9 @@ La API incorpora estos endpoints adicionales:
 
 Las tablas `budgets` y `budget_items` se crean automáticamente al abrir SQLite. Si se utiliza una base existente de una versión anterior, la inicialización migra el estado técnico legado `pending` a `issued` y conserva los presupuestos, sus líneas y sus relaciones. Los estados actuales son `issued`, `paid` y `rejected`; en la interfaz se muestran como **Emitido**, **Pagado** y **Rechazado**. Los precios y subtotales se almacenan en centavos enteros para evitar errores de redondeo.
 
-## Uso local y límite de seguridad
+## Uso y límite de seguridad
 
-La primera versión no incluye autenticación ni control de usuarios. Por eso debe usarse solo en:
-
-- entorno local del equipo;
-- entorno controlado del mismo comercio;
-- una red privada, no pública ni accesible desde Internet sin un diseño de seguridad adicional.
-
-No publicarla abiertamente ni usarla con datos reales de producción antes de implementar autenticación, autorización y medidas de seguridad apropiadas.
+La primera versión no incluye autenticación ni control de usuarios. Está pensada para uso local o en un entorno controlado. La demo pública descripta arriba se publica solo con fines de evaluación académica, con datos de prueba; antes de usarla con datos reales hay que implementar autenticación, autorización y medidas de seguridad apropiadas.
 
 ## Verificación de persistencia
 
@@ -226,5 +233,5 @@ Para comprobar que los cambios persisten tras reiniciar el servidor:
 - [cambio] 2026-10-28 — Se precisa que la versión actual es de uso local/controlado y sin autenticación.
 - [cambio] 2026-11-02 — Se documentan la configuración `.env`, las reglas de stock y categorías, y la suite completa de pruebas.
 - [cambio] 2026-11-02 — Se incorpora el flujo de presupuestos con reserva transaccional de stock, PDF e historial de pagados/rechazados.
-
+- [cambio] 2026-11-15 — Se agrega la sección de demo en línea y se actualiza el límite de seguridad para el despliegue de evaluación (Render, plan gratuito).
 - [cambio] 2026-11-15 — Se sincroniza la documentación con el flujo de presupuestos y se normalizan los nombres de archivos de agentes y backlog.
